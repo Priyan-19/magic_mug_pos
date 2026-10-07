@@ -1,0 +1,38 @@
+from typing import List
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
+
+
+class Settings(BaseSettings):
+    APP_NAME: str = "MAGIC MUG POS"
+    ENV: str = "development"
+    PORT: int = 8000
+    DEBUG: bool = True
+    TIMEZONE: str = "Asia/Kolkata"
+
+    # Database (PostgreSQL via asyncpg)
+    DATABASE_URL: str = Field(
+        default="postgresql+asyncpg://pos_user:super_secure_pos_password@localhost:5432/magic_mug_pos",
+        description="PostgreSQL async SQLAlchemy database URL"
+    )
+
+    # JWT Security
+    SECRET_KEY: str = "magic-mug-super-secret-key-change-in-production-2026"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 720  # 12 hours
+
+    # CORS
+    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173"
+
+    @property
+    def cors_origins(self) -> List[str]:
+        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",") if origin.strip()]
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
+
+
+settings = Settings()

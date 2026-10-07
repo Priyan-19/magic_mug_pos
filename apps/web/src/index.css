@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #F4F5F7;
+  color: #1E293B;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hide all scrollbars globally across all browsers while keeping smooth scrolling */
+* {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
+}
+
+*::-webkit-scrollbar,
+::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Edge, Opera */
+  width: 0 !important;
+  height: 0 !important;
+}
+
+html, body {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+/* Thermal receipt print styles */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 10px;
+    background: white !important;
+    color: black !important;
+    font-family: 'Courier New', Courier, monospace !important;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Steam & Coffee Loading Animations */
+@keyframes steam-1 {
+  0% { transform: translateY(0) scaleX(1); opacity: 0; }
+  20% { opacity: 0.8; }
+  50% { transform: translateY(-16px) scaleX(1.3) translateX(-4px); }
+  90% { opacity: 0.15; }
+  100% { transform: translateY(-34px) scaleX(1.6) translateX(3px); opacity: 0; }
+}
+
+@keyframes steam-2 {
+  0% { transform: translateY(0) scaleX(1); opacity: 0; }
+  25% { opacity: 0.9; }
+  55% { transform: translateY(-20px) scaleX(1.2) translateX(5px); }
+  85% { opacity: 0.2; }
+  100% { transform: translateY(-38px) scaleX(1.5) translateX(-2px); opacity: 0; }
+}
+
+@keyframes steam-3 {
+  0% { transform: translateY(0) scaleX(1); opacity: 0; }
+  20% { opacity: 0.7; }
+  50% { transform: translateY(-14px) scaleX(1.4) translateX(-2px); }
+  90% { opacity: 0.1; }
+  100% { transform: translateY(-30px) scaleX(1.7) translateX(4px); opacity: 0; }
+}
+
+.animate-steam-1 {
+  animation: steam-1 2.6s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+.animate-steam-2 {
+  animation: steam-2 3.1s infinite cubic-bezier(0.4, 0, 0.2, 1) 0.5s;
+}
+.animate-steam-3 {
+  animation: steam-3 2.4s infinite cubic-bezier(0.4, 0, 0.2, 1) 1s;
+}
