@@ -8,15 +8,18 @@ import {
   QrCode,
   Award,
   Wallet,
+  Package,
 } from 'lucide-react';
 import {
   DailyAnalytics,
   WeeklyAnalytics,
   MonthlyAnalytics,
   BestSellerItem,
+  Product,
 } from '../types';
-import { analyticsService } from '../services/cafeServices';
+import { analyticsService, catalogService } from '../services/cafeServices';
 import { useToast } from '../context/ToastContext';
+import { getProductImage } from '../utils/productImages';
 
 export const AnalyticsPage: React.FC = () => {
   const [timeView, setTimeView] = useState<'today' | 'weekly' | 'monthly'>('today');
@@ -24,6 +27,7 @@ export const AnalyticsPage: React.FC = () => {
   const [weeklyData, setWeeklyData] = useState<WeeklyAnalytics | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyAnalytics | null>(null);
   const [bestSellers, setBestSellers] = useState<BestSellerItem[]>([]);
+  const [trackedProducts, setTrackedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const { error: showError } = useToast();
@@ -31,31 +35,39 @@ export const AnalyticsPage: React.FC = () => {
   const loadAnalytics = useCallback(async () => {
     try {
       setIsLoading(true);
+      const prodsPromise = catalogService.getProducts().catch(() => []);
+
       if (timeView === 'today') {
-        const [daily, best] = await Promise.all([
+        const [daily, best, prods] = await Promise.all([
           analyticsService.getDaily(),
           analyticsService.getBestSellers({ limit: 6 }),
+          prodsPromise,
         ]);
         setDailyData(daily);
         setBestSellers(best);
+        setTrackedProducts(prods.filter((p) => p.track_stock));
       } else if (timeView === 'weekly') {
-        const [weekly, daily, best] = await Promise.all([
+        const [weekly, daily, best, prods] = await Promise.all([
           analyticsService.getWeekly(),
           analyticsService.getDaily(),
           analyticsService.getBestSellers({ limit: 6 }),
+          prodsPromise,
         ]);
         setWeeklyData(weekly);
         setDailyData(daily);
         setBestSellers(best);
+        setTrackedProducts(prods.filter((p) => p.track_stock));
       } else {
-        const [monthly, daily, best] = await Promise.all([
+        const [monthly, daily, best, prods] = await Promise.all([
           analyticsService.getMonthly(),
           analyticsService.getDaily(),
           analyticsService.getBestSellers({ limit: 6 }),
+          prodsPromise,
         ]);
         setMonthlyData(monthly);
         setDailyData(daily);
         setBestSellers(best);
+        setTrackedProducts(prods.filter((p) => p.track_stock));
       }
     } catch (err: any) {
       showError('Analytics Error', err.message || 'Failed to load analytics');
@@ -437,6 +449,83 @@ export const AnalyticsPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Tracked Batch Inventory & Availability Balance */}
+      {trackedProducts.length > 0 && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm animate-fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Package className="w-4 h-4 text-maroon-700" />
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">
+                  Daily Batch Stock & Availability
+                </h2>
+                <p className="text-[11px] text-slate-400">
+                  Live inventory balance for items with daily stock tracking
+                </p>
+              </div>
+            </div>
+            <span className="text-[11px] font-extrabold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-xl">
+              {trackedProducts.length} Items Tracked
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {trackedProducts.map((prod) => {
+              const stock = prod.stock_quantity ?? 0;
+              const isSoldOut = stock <= 0;
+              const imgUrl = getProductImage(prod.name, prod.image_url);
+
+              return (
+                <div
+                  key={prod.id}
+                  className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <img
+                      src={imgUrl}
+                      alt={prod.name}
+                      className="w-10 h-10 rounded-xl object-cover bg-slate-200 flex-shrink-0"
+                    />
+                    <div className="min-w-0">
+                      <div className="font-bold text-xs text-slate-900 truncate">
+                        {prod.name}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono">
+                        ₹{parseFloat(prod.selling_price).toFixed(2)} / Portion
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="text-right flex-shrink-0">
+                    {isSoldOut ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-700 border border-rose-200 animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                        SOLD OUT
+                      </span>
+                    ) : (
+                      <span
+                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                          stock <= 3
+                            ? 'bg-amber-50 text-amber-700 border-amber-200'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}
+                      >
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            stock <= 3 ? 'bg-amber-500' : 'bg-emerald-500'
+                          }`}
+                        />
+                        {stock} Balance
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

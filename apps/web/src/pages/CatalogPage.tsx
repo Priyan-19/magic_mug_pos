@@ -13,6 +13,7 @@ import {
   X,
   Check,
   Power,
+  Package,
 } from 'lucide-react';
 import { Category, Product } from '../types';
 import { catalogService } from '../services/cafeServices';
@@ -45,6 +46,8 @@ export const CatalogPage: React.FC = () => {
   const [prodPrice, setProdPrice] = useState('');
   const [prodImageUrl, setProdImageUrl] = useState('');
   const [prodIsActive, setProdIsActive] = useState<boolean>(true);
+  const [prodTrackStock, setProdTrackStock] = useState<boolean>(false);
+  const [prodStockQuantity, setProdStockQuantity] = useState<number>(10);
   const [showPresetPicker, setShowPresetPicker] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -142,10 +145,40 @@ export const CatalogPage: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  const openCreateProduct = () => {
+    setEditingProduct(null);
+    setProdName('');
+    setProdDesc('');
+    setProdPrice('');
+    setProdImageUrl('');
+    setProdIsActive(true);
+    setProdTrackStock(false);
+    setProdStockQuantity(10);
+    setShowPresetPicker(false);
+    if (categories.length > 0) setProdCategoryId(categories[0].id);
+    setIsProdModalOpen(true);
+  };
+
+  const openEditProduct = (prod: Product) => {
+    setEditingProduct(prod);
+    setProdCategoryId(prod.category_id);
+    setProdName(prod.name);
+    setProdDesc(prod.description || '');
+    setProdPrice(prod.selling_price);
+    setProdImageUrl(prod.image_url || getProductImage(prod.name));
+    setProdIsActive(prod.is_active);
+    setProdTrackStock(!!prod.track_stock);
+    setProdStockQuantity(prod.stock_quantity ?? 0);
+    setShowPresetPicker(false);
+    setIsProdModalOpen(true);
+  };
+
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const cleanImageUrl = prodImageUrl.trim() || undefined;
+      const initialStock = prodTrackStock ? Math.max(0, prodStockQuantity) : 0;
+
       if (editingProduct) {
         await catalogService.updateProduct(editingProduct.id, {
           category_id: prodCategoryId,
@@ -154,6 +187,8 @@ export const CatalogPage: React.FC = () => {
           selling_price: prodPrice,
           image_url: cleanImageUrl,
           is_active: prodIsActive,
+          track_stock: prodTrackStock,
+          stock_quantity: initialStock,
         });
         showSuccess('Product Updated', `Updated '${prodName}'`);
       } else {
@@ -163,6 +198,8 @@ export const CatalogPage: React.FC = () => {
           description: prodDesc.trim() || undefined,
           selling_price: prodPrice,
           image_url: cleanImageUrl,
+          track_stock: prodTrackStock,
+          stock_quantity: initialStock,
         });
         showSuccess('Product Created', `Added '${prodName}' to catalog`);
       }
@@ -173,10 +210,98 @@ export const CatalogPage: React.FC = () => {
       setProdPrice('');
       setProdImageUrl('');
       setProdIsActive(true);
+      setProdTrackStock(false);
+      setProdStockQuantity(10);
       setShowPresetPicker(false);
       loadData();
     } catch (err: any) {
       showError('Save Failed', err.message || 'Failed to save product');
+    }
+  };
+
+  const handleToggleStock = async (prod: Product) => {
+    try {
+      const nextTrackStock = !prod.track_stock;
+      const nextStockQty = nextTrackStock
+        ? prod.stock_quantity && prod.stock_quantity > 0
+          ? prod.stock_quantity
+          : 10
+        : (prod.stock_quantity ?? 0);
+
+      // Optimistic state update for instant UI feedback
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === prod.id
+            ? { ...p, track_stock: nextTrackStock, stock_quantity: nextStockQty }
+            : p
+        )
+      );
+
+      await catalogService.updateStock(prod.id, {
+        track_stock: nextTrackStock,
+        stock_quantity: nextStockQty,
+      });
+
+      showSuccess(
+        nextTrackStock ? 'Stock Tracking ON' : 'Stock Tracking OFF',
+        nextTrackStock
+          ? `'${prod.name}' set to ${nextStockQty} units. POS will track availability.`
+          : `'${prod.name}' set to unlimited availability.`
+      );
+    } catch (err: any) {
+      showError('Update Failed', err.message || 'Failed to update stock setting');
+      loadData();
+    }
+  };
+
+  const handleAdjustStock = async (prod: Product, delta: number) => {
+    try {
+      const currentQty = prod.stock_quantity ?? 0;
+      const nextQty = Math.max(0, currentQty + delta);
+
+      // Optimistic update
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === prod.id
+            ? { ...p, track_stock: true, stock_quantity: nextQty }
+            : p
+        )
+      );
+
+      await catalogService.updateStock(prod.id, {
+        track_stock: true,
+        stock_quantity: nextQty,
+      });
+
+      showSuccess(
+        'Stock Updated',
+        `'${prod.name}' balance updated to ${nextQty} units`
+      );
+    } catch (err: any) {
+      showError('Update Failed', err.message || 'Failed to adjust stock');
+      loadData();
+    }
+  };
+
+  const handleSetExactStock = async (prod: Product, exactQty: number) => {
+    try {
+      const qty = Math.max(0, Math.floor(exactQty));
+
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === prod.id
+            ? { ...p, track_stock: true, stock_quantity: qty }
+            : p
+        )
+      );
+
+      await catalogService.updateStock(prod.id, {
+        track_stock: true,
+        stock_quantity: qty,
+      });
+    } catch (err: any) {
+      showError('Update Failed', err.message || 'Failed to update stock quantity');
+      loadData();
     }
   };
 
@@ -263,17 +388,7 @@ export const CatalogPage: React.FC = () => {
 
           {activeSubTab === 'products' ? (
             <button
-              onClick={() => {
-                setEditingProduct(null);
-                setProdName('');
-                setProdDesc('');
-                setProdPrice('');
-                setProdImageUrl('');
-                setProdIsActive(true);
-                setShowPresetPicker(false);
-                if (categories.length > 0) setProdCategoryId(categories[0].id);
-                setIsProdModalOpen(true);
-              }}
+              onClick={openCreateProduct}
               className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 sm:py-2.5 rounded-2xl bg-maroon-700 hover:bg-maroon-800 text-white text-xs font-bold shadow-glow-maroon transition-all"
             >
               <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -329,13 +444,14 @@ export const CatalogPage: React.FC = () => {
 
           <div className="bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[650px] text-left text-xs">
+              <table className="w-full min-w-[780px] text-left text-xs">
                 <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider text-[10px] border-b border-slate-200">
                   <tr>
                     <th className="py-4 px-5 font-bold">Product Item</th>
                     <th className="py-4 px-5 font-bold">Category</th>
                     <th className="py-4 px-5 font-bold text-right">Selling Price</th>
                     <th className="py-4 px-5 font-bold text-center">Status</th>
+                    <th className="py-4 px-5 font-bold text-center">Add Stock</th>
                     <th className="py-4 px-5 font-bold text-right">Actions</th>
                   </tr>
                 </thead>
@@ -344,17 +460,7 @@ export const CatalogPage: React.FC = () => {
                     <tr key={prod.id} className="hover:bg-slate-50/70 transition-colors">
                       <td className="py-3 px-5 flex items-center gap-3">
                         <div
-                          onClick={() => {
-                            setEditingProduct(prod);
-                            setProdCategoryId(prod.category_id);
-                            setProdName(prod.name);
-                            setProdDesc(prod.description || '');
-                            setProdPrice(prod.selling_price);
-                            setProdImageUrl(prod.image_url || getProductImage(prod.name));
-                            setProdIsActive(prod.is_active);
-                            setShowPresetPicker(false);
-                            setIsProdModalOpen(true);
-                          }}
+                          onClick={() => openEditProduct(prod)}
                           className="relative group/thumb cursor-pointer flex-shrink-0"
                           title="Click to edit dish & photo"
                         >
@@ -403,20 +509,121 @@ export const CatalogPage: React.FC = () => {
                           <span>{prod.is_active ? 'Active' : 'Inactive'}</span>
                         </button>
                       </td>
+
+                      {/* ADD STOCK COLUMN WITH TOGGLE BUTTON & LIVE BALANCE */}
+                      <td className="py-3 px-5 text-center">
+                        <div className="inline-flex flex-col items-center gap-1.5">
+                          {/* Toggle Switch */}
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={prod.track_stock}
+                              onClick={() => handleToggleStock(prod)}
+                              title={
+                                prod.track_stock
+                                  ? 'Stock tracking is ON (Click to set unlimited)'
+                                  : 'Stock tracking is OFF (Click to track daily stock)'
+                              }
+                              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                prod.track_stock ? 'bg-maroon-700' : 'bg-slate-300 hover:bg-slate-400'
+                              }`}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                                  prod.track_stock ? 'translate-x-5' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                            <span
+                              className={`text-[11px] font-extrabold ${
+                                prod.track_stock ? 'text-maroon-900' : 'text-slate-400'
+                              }`}
+                            >
+                              {prod.track_stock ? 'ON' : 'OFF'}
+                            </span>
+                          </div>
+
+                          {/* When Stock Tracking is Active: Show Stepper & Balance Indicator */}
+                          {prod.track_stock ? (
+                            <div className="flex flex-col items-center gap-1 animate-fade-in">
+                              <div className="flex items-center gap-1 bg-slate-100/90 border border-slate-200/90 rounded-xl p-0.5 shadow-xs">
+                                <button
+                                  type="button"
+                                  disabled={(prod.stock_quantity ?? 0) <= 0}
+                                  onClick={() => handleAdjustStock(prod, -1)}
+                                  title="Reduce stock by 1"
+                                  className="w-5 h-5 rounded-lg bg-white hover:bg-slate-200 disabled:opacity-30 text-slate-700 flex items-center justify-center font-bold text-xs shadow-xs"
+                                >
+                                  -
+                                </button>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={prod.stock_quantity ?? 0}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (!isNaN(val) && val >= 0) {
+                                      handleSetExactStock(prod, val);
+                                    }
+                                  }}
+                                  className="w-10 text-center text-xs font-mono font-black text-slate-900 bg-transparent focus:outline-none"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => handleAdjustStock(prod, 1)}
+                                  title="Add 1 to stock"
+                                  className="w-5 h-5 rounded-lg bg-white hover:bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shadow-xs"
+                                >
+                                  +
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAdjustStock(prod, 10)}
+                                  title="Quick Add 10 to stock"
+                                  className="px-1.5 h-5 rounded-lg bg-maroon-50 hover:bg-maroon-100 text-maroon-700 font-extrabold text-[10px] transition-colors border border-maroon-100"
+                                >
+                                  +10
+                                </button>
+                              </div>
+
+                              {/* Availability Status Badge */}
+                              {(prod.stock_quantity ?? 0) <= 0 ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200 animate-pulse">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                                  SOLD OUT
+                                </span>
+                              ) : (
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                    (prod.stock_quantity ?? 0) <= 3
+                                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                      : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full ${
+                                      (prod.stock_quantity ?? 0) <= 3
+                                        ? 'bg-amber-500'
+                                        : 'bg-emerald-500'
+                                    }`}
+                                  />
+                                  <span>{prod.stock_quantity} Balance</span>
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              Unlimited
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
                       <td className="py-3 px-5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
-                            onClick={() => {
-                              setEditingProduct(prod);
-                              setProdCategoryId(prod.category_id);
-                              setProdName(prod.name);
-                              setProdDesc(prod.description || '');
-                              setProdPrice(prod.selling_price);
-                              setProdImageUrl(prod.image_url || getProductImage(prod.name));
-                              setProdIsActive(prod.is_active);
-                              setShowPresetPicker(false);
-                              setIsProdModalOpen(true);
-                            }}
+                            onClick={() => openEditProduct(prod)}
                             className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
                             title="Edit Dish & Image"
                           >
@@ -830,6 +1037,72 @@ export const CatalogPage: React.FC = () => {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* DAILY STOCK TRACKING SECTION */}
+              <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="pr-3">
+                    <label className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                      <Package className="w-4 h-4 text-maroon-700" />
+                      <span>Daily Stock Tracking (Add Stock)</span>
+                    </label>
+                    <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      Enable for items with limited daily quantity (e.g. 10 Puffs). POS updates balance and indicates SOLD OUT when finished.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={prodTrackStock}
+                    onClick={() => setProdTrackStock(!prodTrackStock)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      prodTrackStock ? 'bg-maroon-700' : 'bg-slate-300 hover:bg-slate-400'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                        prodTrackStock ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {prodTrackStock && (
+                  <div className="pt-2.5 border-t border-slate-200/70 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-fade-in">
+                    <div>
+                      <span className="text-xs font-bold text-slate-800">Available Stock Quantity</span>
+                      <span className="text-[10px] text-slate-400 block">Units / pieces available today</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        value={prodStockQuantity}
+                        onChange={(e) =>
+                          setProdStockQuantity(Math.max(0, parseInt(e.target.value) || 0))
+                        }
+                        className="w-24 px-3 py-1.5 bg-white border border-slate-300 focus:border-maroon-700 rounded-xl text-xs font-mono font-bold text-slate-900 text-center focus:outline-none shadow-xs"
+                      />
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setProdStockQuantity((q) => q + 5)}
+                          className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-[10px] font-bold rounded-lg shadow-xs"
+                        >
+                          +5
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setProdStockQuantity((q) => q + 10)}
+                          className="px-2 py-1 bg-maroon-50 hover:bg-maroon-100 border border-maroon-200 text-maroon-700 text-[10px] font-bold rounded-lg shadow-xs"
+                        >
+                          +10
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>

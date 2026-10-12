@@ -37,6 +37,8 @@ export interface Product {
   selling_price: string; // Decimal string from backend
   image_url?: string;
   is_active: boolean;
+  track_stock?: boolean;
+  stock_quantity?: number;
   created_at: string;
   updated_at: string;
 }

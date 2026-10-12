@@ -11,6 +11,8 @@ class ProductBase(BaseModel):
     selling_price: Decimal = Field(..., ge=Decimal("0.00"), examples=[Decimal("45.00")])
     image_url: Optional[str] = Field(None, examples=["https://images.unsplash.com/..."])
     is_active: bool = True
+    track_stock: bool = False
+    stock_quantity: int = 0
 
 
 class ProductCreate(ProductBase):
@@ -24,6 +26,8 @@ class ProductUpdate(BaseModel):
     selling_price: Optional[Decimal] = Field(None, ge=Decimal("0.00"))
     image_url: Optional[str] = None
     is_active: Optional[bool] = None
+    track_stock: Optional[bool] = None
+    stock_quantity: Optional[int] = None
 
 
 class ProductResponse(ProductBase):

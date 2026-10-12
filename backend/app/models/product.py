@@ -20,6 +20,8 @@ class Product(Base):
     selling_price = Column(Numeric(10, 2, asdecimal=True), nullable=False)
     image_url = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, nullable=False, index=True)
+    track_stock = Column(Boolean, default=False, nullable=False)
+    stock_quantity = Column(Integer, default=0, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(
         DateTime(timezone=True),

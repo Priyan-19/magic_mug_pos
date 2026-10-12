@@ -114,7 +114,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
         <div className="text-right hidden sm:block">
           <div className="font-bold text-xs sm:text-sm text-slate-900 leading-tight">
-            {user?.full_name || 'Magic Mug Cafe'}
+            {user?.full_name || 'Magic Mug'}
           </div>
           <div className="text-[10px] text-slate-400 font-medium mt-0.5 lg:hidden">
             {dateFormatted} • {timeFormatted}

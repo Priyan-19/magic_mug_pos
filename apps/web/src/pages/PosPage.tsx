@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   SlidersHorizontal,
   Plus,
@@ -57,28 +57,29 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
 
   const { success: showSuccess, error: showError } = useToast();
 
-  useEffect(() => {
-    const loadCatalog = async () => {
-      try {
-        setIsLoading(true);
-        const [cats, prods, bestSellers] = await Promise.all([
-          catalogService.getCategories(false),
-          catalogService.getProducts({ active_only: true }),
-          analyticsService.getBestSellers({ limit: 1 }).catch(() => []),
-        ]);
-        setCategories(cats);
-        setProducts(prods);
-        if (bestSellers && bestSellers.length > 0) {
-          setPopularProductIds(new Set(bestSellers.map((b) => b.product_id)));
-        }
-      } catch (err: any) {
-        showError('Catalog Error', err.message || 'Failed to load catalog');
-      } finally {
-        setIsLoading(false);
+  const loadCatalog = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const [cats, prods, bestSellers] = await Promise.all([
+        catalogService.getCategories(false),
+        catalogService.getProducts({ active_only: true }),
+        analyticsService.getBestSellers({ limit: 1 }).catch(() => []),
+      ]);
+      setCategories(cats);
+      setProducts(prods);
+      if (bestSellers && bestSellers.length > 0) {
+        setPopularProductIds(new Set(bestSellers.map((b) => b.product_id)));
       }
-    };
-    loadCatalog();
+    } catch (err: any) {
+      showError('Catalog Error', err.message || 'Failed to load catalog');
+    } finally {
+      setIsLoading(false);
+    }
   }, [showError]);
+
+  useEffect(() => {
+    loadCatalog();
+  }, [loadCatalog]);
 
   // Filtered Products
   const filteredProducts = useMemo(() => {
@@ -100,6 +101,25 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
     }
     return map;
   }, [cartItems]);
+
+  const handleAddToCart = (prod: Product) => {
+    if (prod.track_stock) {
+      const stock = prod.stock_quantity ?? 0;
+      if (stock <= 0) {
+        showError('Item Sold Out', `'${prod.name}' is sold out for today!`);
+        return;
+      }
+      const inCart = cartQtyMap.get(prod.id) || 0;
+      if (inCart >= stock) {
+        showError(
+          'Stock Limit Reached',
+          `Only ${stock} '${prod.name}' available in stock. Cannot add more.`
+        );
+        return;
+      }
+    }
+    addItem(prod);
+  };
 
   const handleSaveBill = async () => {
     if (cartItems.length === 0) {
@@ -126,6 +146,8 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
       );
       setConfirmedBill(bill);
       clearCart();
+      // Reload catalog so that stock counts decrement in real-time
+      loadCatalog();
     } catch (err: any) {
       showError('Billing Rejected', err.message || 'Server validation failed');
     } finally {
@@ -286,15 +308,20 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                   const inCartQty = cartQtyMap.get(prod.id) || 0;
                   const imgUrl = getProductImage(prod.name, prod.image_url);
                   const price = parseFloat(prod.selling_price);
+                  const isTracked = prod.track_stock === true;
+                  const stockQty = prod.stock_quantity ?? 0;
+                  const isSoldOut = isTracked && stockQty <= 0;
 
                   return (
                     <div
                       key={prod.id}
-                      onClick={() => addItem(prod)}
-                      className={`group bg-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-3 border transition-all duration-200 cursor-pointer select-none relative flex flex-col hover:shadow-card-hover ${
-                        inCartQty > 0
-                          ? 'border-maroon-700/60 ring-2 ring-maroon-700/15 shadow-sm'
-                          : 'border-slate-100 shadow-card hover:border-slate-200'
+                      onClick={() => handleAddToCart(prod)}
+                      className={`group bg-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-3 border transition-all duration-200 select-none relative flex flex-col ${
+                        isSoldOut
+                          ? 'opacity-70 bg-slate-50/80 border-slate-200 cursor-not-allowed'
+                          : inCartQty > 0
+                          ? 'border-maroon-700/60 ring-2 ring-maroon-700/15 shadow-sm cursor-pointer hover:shadow-card-hover'
+                          : 'border-slate-100 shadow-card hover:border-slate-200 cursor-pointer hover:shadow-card-hover'
                       }`}
                     >
                       {/* Photo Image Card */}
@@ -302,27 +329,60 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                         <img
                           src={imgUrl}
                           alt={prod.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className={`w-full h-full object-cover transition-transform duration-300 ${
+                            isSoldOut
+                              ? 'grayscale contrast-75'
+                              : 'group-hover:scale-105'
+                          }`}
                           loading="lazy"
                         />
-                        {/* Dynamic Popular / Best Seller Tag */}
-                        {popularProductIds.has(prod.id) && (
-                          <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-forest-700 text-white text-[9px] sm:text-[10px] font-bold shadow-sm tracking-wide">
-                            Popular
-                          </div>
-                        )}
 
-                        {/* In Cart Counter */}
-                        {inCartQty > 0 && (
-                          <div className="absolute top-2 right-2 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-maroon-700 text-white font-extrabold text-[10px] sm:text-xs flex items-center justify-center shadow-md animate-scale-in">
-                            {inCartQty}
+                        {/* Sold Out Overlay vs Stock Badges */}
+                        {isSoldOut ? (
+                          <div className="absolute inset-0 bg-black/45 backdrop-blur-[1px] flex items-center justify-center">
+                            <span className="px-2.5 py-1 rounded-full bg-rose-600 text-white text-[10px] sm:text-xs font-black uppercase tracking-wider shadow-lg animate-pulse">
+                              SOLD OUT
+                            </span>
                           </div>
+                        ) : (
+                          <>
+                            {/* Stock Availability Badge */}
+                            {isTracked && (
+                              <div
+                                className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-white text-[9px] sm:text-[10px] font-bold shadow-sm tracking-wide ${
+                                  stockQty <= 3 ? 'bg-amber-600' : 'bg-emerald-600'
+                                }`}
+                              >
+                                {stockQty <= 3 ? `Only ${stockQty} Left` : `${stockQty} Balance`}
+                              </div>
+                            )}
+
+                            {/* Dynamic Popular / Best Seller Tag (when not tracked) */}
+                            {!isTracked && popularProductIds.has(prod.id) && (
+                              <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-forest-700 text-white text-[9px] sm:text-[10px] font-bold shadow-sm tracking-wide">
+                                Popular
+                              </div>
+                            )}
+
+                            {/* In Cart Counter */}
+                            {inCartQty > 0 && (
+                              <div className="absolute top-2 right-2 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-maroon-700 text-white font-extrabold text-[10px] sm:text-xs flex items-center justify-center shadow-md animate-scale-in">
+                                {inCartQty}
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
 
                       {/* Title & Price Section */}
                       <div className="mt-2">
-                        <h4 className="font-extrabold text-xs sm:text-sm text-slate-900 group-hover:text-maroon-700 transition-colors line-clamp-1">
+                        <h4
+                          className={`font-extrabold text-xs sm:text-sm transition-colors line-clamp-1 ${
+                            isSoldOut
+                              ? 'text-slate-400 line-through'
+                              : 'text-slate-900 group-hover:text-maroon-700'
+                          }`}
+                        >
                           {prod.name}
                         </h4>
                         <div className="mt-1.5 sm:mt-2 pt-1.5 sm:pt-2 border-t border-slate-100 flex items-center justify-between">
@@ -332,9 +392,15 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                             </span>
                             <span className="text-[9px] sm:text-[10px] text-slate-400 font-medium">/ Portion</span>
                           </div>
-                          <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-slate-100 group-hover:bg-maroon-700 group-hover:text-white text-slate-600 flex items-center justify-center transition-colors">
-                            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
-                          </div>
+                          {isSoldOut ? (
+                            <span className="text-[10px] font-extrabold text-rose-600 uppercase px-1.5 py-0.5 rounded bg-rose-50 border border-rose-200">
+                              Sold Out
+                            </span>
+                          ) : (
+                            <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg sm:rounded-xl bg-slate-100 group-hover:bg-maroon-700 group-hover:text-white text-slate-600 flex items-center justify-center transition-colors">
+                              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -417,14 +483,21 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
 
                       {/* Product Name & Category */}
                       <div className="flex-1 min-w-0">
-                        <div className="font-bold text-xs text-slate-900 truncate">
-                          {product.name}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-xs text-slate-900 truncate">
+                            {product.name}
+                          </span>
+                          {product.track_stock && (
+                            <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200">
+                              {product.stock_quantity} left
+                            </span>
+                          )}
                         </div>
                         <div className="text-[11px] text-slate-400 font-medium">
-                          {product.category_name || 'Coffee'}
+                          {product.category_name || 'Cafe Item'}
                         </div>
 
-                        {/* Stepper matching Image 2 & 3 */}
+                        {/* Stepper with Stock Limit Guard */}
                         <div className="flex items-center gap-2 mt-1.5">
                           <button
                             onClick={() => updateQuantity(product.id, -1)}
@@ -436,8 +509,24 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                             {quantity}
                           </span>
                           <button
-                            onClick={() => updateQuantity(product.id, 1)}
-                            className="w-5 h-5 rounded-lg bg-maroon-700 hover:bg-maroon-800 text-white flex items-center justify-center transition-colors shadow-sm"
+                            onClick={() => {
+                              if (product.track_stock) {
+                                const avail = product.stock_quantity ?? 0;
+                                if (quantity >= avail) {
+                                  showError(
+                                    'Stock Limit Reached',
+                                    `Only ${avail} '${product.name}' available in stock`
+                                  );
+                                  return;
+                                }
+                              }
+                              updateQuantity(product.id, 1);
+                            }}
+                            disabled={
+                              product.track_stock &&
+                              quantity >= (product.stock_quantity ?? 0)
+                            }
+                            className="w-5 h-5 rounded-lg bg-maroon-700 hover:bg-maroon-800 disabled:opacity-40 disabled:hover:bg-maroon-700 text-white flex items-center justify-center transition-colors shadow-sm"
                           >
                             <Plus className="w-3 h-3" />
                           </button>

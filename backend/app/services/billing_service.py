@@ -57,6 +57,15 @@ class BillingService:
                     detail=f"Product '{product.name}' (ID {product.id}) is deactivated and cannot be billed"
                 )
             
+            # Stock tracking check & balance deduction
+            if product.track_stock:
+                if product.stock_quantity < item_in.quantity:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Insufficient stock for '{product.name}'. Remaining balance: {product.stock_quantity}, requested: {item_in.quantity}"
+                    )
+                product.stock_quantity -= item_in.quantity
+            
             unit_price = Decimal(str(product.selling_price))
             line_total = unit_price * item_in.quantity
             subtotal += line_total
@@ -212,6 +221,12 @@ class BillingService:
         bill.status = "VOID"
         bill.void_reason = payload.reason
         bill.voided_at = now
+
+        # Restore stock for tracked products
+        for item in bill.items:
+            prod = await db.get(Product, item.product_id)
+            if prod and prod.track_stock:
+                prod.stock_quantity += item.quantity
 
         # Add audit log
         await AuditService.log_action(

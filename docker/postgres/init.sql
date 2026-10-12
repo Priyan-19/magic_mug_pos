@@ -1,4 +1,4 @@
--- Magic Mug Cafe POS - PostgreSQL Database Initialization Script
+-- Magic Mug POS - PostgreSQL Database Initialization Script
 -- Initializes schema, tables, indices, and constraints
 
 CREATE TABLE IF NOT EXISTS users (
@@ -101,7 +101,7 @@ VALUES (
     'admin',
     'admin@magicmug.com',
     '$2b$12$dVGHeTk49l/ynOKSpFbS7ud2RmT1SdIyAPpivQvoRX8NXkcC52Tcy',
-    'Magic Mug Cafe',
+    'Magic Mug',
     'OWNER',
     TRUE
 )

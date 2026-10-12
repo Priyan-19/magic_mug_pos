@@ -1,5 +1,5 @@
 /**
- * Date and Time utilities for Magic Mug Cafe POS.
+ * Date and Time utilities for Magic Mug POS.
  * Accurately parses UTC and SQLite timestamps and formats them in local cafe time.
  */
 

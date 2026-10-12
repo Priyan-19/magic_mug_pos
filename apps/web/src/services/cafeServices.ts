@@ -39,10 +39,12 @@ export const catalogService = {
     return api.get<Product[]>(`/products?${q.toString()}`);
   },
   getProduct: (id: number) => api.get<Product>(`/products/${id}`),
-  createProduct: (payload: { category_id: number; name: string; description?: string; selling_price: string; image_url?: string }) =>
+  createProduct: (payload: { category_id: number; name: string; description?: string; selling_price: string; image_url?: string; track_stock?: boolean; stock_quantity?: number }) =>
     api.post<Product>('/products', payload),
   updateProduct: (id: number, payload: Partial<Product>) =>
     api.put<Product>(`/products/${id}`, payload),
+  updateStock: (id: number, payload: { track_stock?: boolean; stock_quantity?: number }) =>
+    api.patch<Product>(`/products/${id}/stock`, payload),
   deactivateProduct: (id: number) => api.del<{ success: boolean; message: string }>(`/products/${id}`),
 };
 

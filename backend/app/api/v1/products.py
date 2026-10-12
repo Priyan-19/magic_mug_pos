@@ -95,7 +95,9 @@ async def create_product(
         description=payload.description,
         selling_price=payload.selling_price,
         image_url=payload.image_url.strip() if payload.image_url else None,
-        is_active=payload.is_active
+        is_active=payload.is_active,
+        track_stock=payload.track_stock,
+        stock_quantity=payload.stock_quantity if payload.track_stock else 0
     )
     db.add(product)
     await db.flush()
@@ -108,7 +110,9 @@ async def create_product(
         metadata={
             "name": product.name,
             "selling_price": str(product.selling_price),
-            "category_id": product.category_id
+            "category_id": product.category_id,
+            "track_stock": product.track_stock,
+            "stock_quantity": product.stock_quantity
         },
         user_id=current_user.id
     )
@@ -155,6 +159,10 @@ async def update_product(
         product.image_url = payload.image_url.strip() if payload.image_url.strip() else None
     if payload.is_active is not None:
         product.is_active = payload.is_active
+    if payload.track_stock is not None:
+        product.track_stock = payload.track_stock
+    if payload.stock_quantity is not None:
+        product.stock_quantity = max(0, payload.stock_quantity)
 
     await AuditService.log_action(
         db=db,
@@ -165,7 +173,49 @@ async def update_product(
             "name": product.name,
             "old_price": old_price,
             "new_price": str(product.selling_price),
-            "is_active": product.is_active
+            "is_active": product.is_active,
+            "track_stock": product.track_stock,
+            "stock_quantity": product.stock_quantity
+        },
+        user_id=current_user.id
+    )
+    await db.commit()
+    await db.refresh(product)
+
+    cat = await db.get(Category, product.category_id)
+    resp = ProductResponse.model_validate(product)
+    resp.category_name = cat.name if cat else None
+    return resp
+
+
+@router.patch("/{product_id}/stock", response_model=ProductResponse)
+async def update_product_stock(
+    product_id: int,
+    payload: ProductUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_role(["OWNER", "CASHIER"]))
+):
+    product = await db.get(Product, product_id)
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Product with ID {product_id} not found"
+        )
+
+    if payload.track_stock is not None:
+        product.track_stock = payload.track_stock
+    if payload.stock_quantity is not None:
+        product.stock_quantity = max(0, payload.stock_quantity)
+
+    await AuditService.log_action(
+        db=db,
+        action="PRODUCT_STOCK_UPDATED",
+        entity_type="product",
+        entity_id=str(product.id),
+        metadata={
+            "name": product.name,
+            "track_stock": product.track_stock,
+            "stock_quantity": product.stock_quantity
         },
         user_id=current_user.id
     )

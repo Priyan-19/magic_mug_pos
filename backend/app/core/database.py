@@ -55,7 +55,7 @@ async def init_db() -> None:
                     username="admin",
                     email="admin@magicmug.com",
                     password_hash=get_password_hash("secretpassword"),
-                    full_name="Magic Mug Cafe",
+                    full_name="Magic Mug",
                     role="OWNER",
                     is_active=True,
                 )
