@@ -301,6 +301,26 @@ class _ReceiptDialogState extends State<ReceiptDialog> {
                           textAlign: TextAlign.center,
                           style: GoogleFonts.jetBrainsMono(fontSize: 8.5, color: const Color(0xFF71717A)),
                         ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Powered by ',
+                              style: GoogleFonts.jetBrainsMono(
+                                fontSize: 8.0,
+                                color: const Color(0xFF71717A),
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Image.asset(
+                              'assets/growera_logo.png',
+                              height: 12.0,
+                              fit: BoxFit.contain,
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   ),
