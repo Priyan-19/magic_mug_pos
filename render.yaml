@@ -9,7 +9,7 @@ services:
     plan: free
     envVars:
       - key: DATABASE_URL
-        sync: false # Set this to your Supabase PostgreSQL Connection String
+        value: postgresql://postgres.xkhvbvzgxhccxvpjywzc:magicmugdb2026@aws-0-ap-south-1.pooler.supabase.com:5432/postgres
       - key: SECRET_KEY
         generateValue: true
       - key: ALLOWED_ORIGINS
