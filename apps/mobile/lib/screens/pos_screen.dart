@@ -7,7 +7,6 @@ import '../providers/menu_provider.dart';
 import '../providers/bill_provider.dart';
 import '../widgets/custom_top_bar.dart';
 import '../widgets/receipt_dialog.dart';
-import '../widgets/server_settings_dialog.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -134,17 +133,7 @@ class _PosScreenState extends State<PosScreen> {
                             children: [
                               Icon(Icons.restaurant_menu, size: 44, color: Colors.grey.shade400),
                               const SizedBox(height: 10),
-                              const Text('No products loaded', style: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w600)),
-                              const SizedBox(height: 12),
-                              OutlinedButton.icon(
-                                onPressed: () => ServerSettingsDialog.show(context),
-                                icon: const Icon(Icons.wifi_tethering, size: 16, color: AppColors.maroon),
-                                label: const Text('Check Server / Reconnect', style: TextStyle(fontSize: 12, color: AppColors.maroon)),
-                                style: OutlinedButton.styleFrom(
-                                  side: const BorderSide(color: AppColors.maroon),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                ),
-                              ),
+                              const Text('No products available', style: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.w600)),
                             ],
                           ),
                         )
