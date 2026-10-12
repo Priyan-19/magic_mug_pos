@@ -211,9 +211,6 @@ export const PrintableReceipt: React.FC<PrintableReceiptProps> = ({ bill, onClos
               <div style={{ fontSize: '9.5px', color: '#71717a', lineHeight: 1.35, padding: '3px 8px 0 8px' }}>
                 No 13/21, Avant Garde, Road, Nehru St, opposite to Turf Genesis, Nehru Nagar West, Coimbatore, Tamil Nadu 641014
               </div>
-              <div style={{ fontSize: '10px', color: '#71717a', paddingTop: '3px' }}>
-                GSTIN: 29AABCU9603R1ZX
-              </div>
             </div>
 
             {/* Receipt Meta */}

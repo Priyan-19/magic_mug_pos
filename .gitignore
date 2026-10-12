@@ -11,22 +11,15 @@
 !backend/.env.example
 
 # ==========================================
-# Node.js / Frontend (React / Vite)
+# Node.js / Web Frontend (React + Vite)
 # ==========================================
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
-
-# Production build outputs
 dist/
 dist-ssr/
-build/
-*.local
-
-# Cache directories
 .eslintcache
 .stylelintcache
 .vite/
@@ -34,23 +27,17 @@ build/
 .parcel-cache/
 
 # ==========================================
-# Python / Backend (FastAPI / Uvicorn)
+# Python / Backend (FastAPI + Uvicorn)
 # ==========================================
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-
-# Virtual Environments
 .venv/
 venv/
 ENV/
 env/
-env.bak/
-venv.bak/
-
-# Testing & Coverage
 .pytest_cache/
 .coverage
 .coverage.*
@@ -59,11 +46,48 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
-
-# Type Checking
 .mypy_cache/
 .pytype/
 .ruff_cache/
+
+# ==========================================
+# Flutter & Mobile (Android & iOS)
+# ==========================================
+.dart_tool/
+.packages
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+build/
+
+# Android Specific
+android/.gradle/
+android/captures/
+android/gradlew
+android/gradlew.bat
+android/local.properties
+android/key.properties
+android/**/build/
+*.keystore
+*.jks
+*.apk
+*.aab
+
+# iOS Specific
+ios/.symlinks/
+ios/Pods/
+ios/Podfile.lock
+ios/DerivedData/
+ios/Flutter/ephemeral/
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.ipa
 
 # ==========================================
 # Database & Persistent Volumes
@@ -72,6 +96,7 @@ coverage.xml
 *.db
 postgres_data/
 db_data/
+magicmug_pgdata/
 
 # ==========================================
 # Operating System & IDE Files
@@ -94,13 +119,14 @@ desktop.ini
 !.vscode/extensions.json
 *.sublime-workspace
 *.sublime-project
+*.iml
 
 # ==========================================
-# Temporary & Agent Artifacts
+# Logs & Temporary Files
 # ==========================================
 *.log
 logs/
 .temp/
 tmp/
+studio_run.log
 .agents/
-docs/

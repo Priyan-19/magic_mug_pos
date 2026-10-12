@@ -5,7 +5,7 @@ from app.core.config import settings
 
 # PostgreSQL Async Engine configuration
 engine = create_async_engine(
-    settings.DATABASE_URL,
+    settings.async_database_url,
     echo=False,
     future=True,
     pool_pre_ping=True,
@@ -36,3 +36,29 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    # Ensure initial cafe admin account exists for production authentication (Zero test data)
+    from sqlalchemy import select
+    from app.models.user import User
+    from app.core.security import get_password_hash
+
+    async with AsyncSessionLocal() as session:
+        try:
+            stmt = select(User).where(User.username == "admin")
+            result = await session.execute(stmt)
+            admin_user = result.scalars().first()
+            if not admin_user:
+                admin_user = User(
+                    username="admin",
+                    email="admin@magicmug.com",
+                    password_hash=get_password_hash("secretpassword"),
+                    full_name="Magic Mug Cafe",
+                    role="OWNER",
+                    is_active=True,
+                )
+                session.add(admin_user)
+                await session.commit()
+        except Exception as e:
+            await session.rollback()
+            print(f"[init_db] Admin user check: {e}")
+
