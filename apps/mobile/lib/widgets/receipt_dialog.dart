@@ -46,7 +46,7 @@ class _ReceiptDialogState extends State<ReceiptDialog> {
         await SharePlus.instance.share(
           ShareParams(
             files: [XFile(imagePath)],
-            text: 'Magic Mug Cafe Bill #${widget.bill.billNumber}',
+            text: 'Magic Mug Bill #${widget.bill.billNumber}',
           ),
         );
       }
@@ -179,7 +179,7 @@ class _ReceiptDialogState extends State<ReceiptDialog> {
                         const SizedBox(height: 4),
                         _buildMetaRow('Date & Time:', dateFormat.format(bill.billDate.toLocal())),
                         const SizedBox(height: 4),
-                        _buildMetaRow('Cashier:', bill.creatorName ?? 'Magic Mug Cafe'),
+                        _buildMetaRow('Cashier:', bill.creatorName ?? 'Magic Mug'),
                         const SizedBox(height: 6),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -301,22 +301,22 @@ class _ReceiptDialogState extends State<ReceiptDialog> {
                           textAlign: TextAlign.center,
                           style: GoogleFonts.jetBrainsMono(fontSize: 8.5, color: const Color(0xFF71717A)),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 12),
                         Text(
                           'POWERED BY',
                           textAlign: TextAlign.center,
                           style: GoogleFonts.jetBrainsMono(
                             fontSize: 7.5,
-                            letterSpacing: 1.2,
+                            letterSpacing: 1.4,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF94A3B8),
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 5),
                         Center(
                           child: Image.asset(
                             'assets/growera_logo.png',
-                            height: 18,
+                            height: 24,
                             fit: BoxFit.contain,
                           ),
                         ),

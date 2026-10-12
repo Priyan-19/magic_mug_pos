@@ -334,14 +334,20 @@ export const PrintableReceipt: React.FC<PrintableReceiptProps> = ({ bill, onClos
               <div style={{ fontSize: '9px', color: '#71717a', marginTop: '3px' }}>
                 Follow us on Instagram @magicmug_cbe
               </div>
-              <div style={{ fontSize: '7.5px', letterSpacing: '0.12em', color: '#94a3b8', fontWeight: 700, marginTop: '10px', textTransform: 'uppercase' }}>
+              <div style={{ fontSize: '8px', letterSpacing: '0.14em', color: '#94a3b8', fontWeight: 700, marginTop: '12px', textTransform: 'uppercase' }}>
                 POWERED BY
               </div>
-              <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'center' }}>
+              <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <img
                   src={groweraLogo}
                   alt="Growera"
-                  style={{ height: '18px', objectFit: 'contain' }}
+                  style={{
+                    height: '24px',
+                    width: 'auto',
+                    maxWidth: '130px',
+                    objectFit: 'contain',
+                    display: 'block',
+                  }}
                 />
               </div>
             </div>
