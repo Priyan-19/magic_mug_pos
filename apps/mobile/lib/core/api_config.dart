@@ -1,8 +1,8 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiConfig {
-  // Current local LAN IP of the host machine running backend
-  static const String defaultBaseUrl = 'http://10.28.67.82:8000/api/v1';
+  // Production Cloud URL on Render
+  static const String defaultBaseUrl = 'https://magic-mug-api.onrender.com/api/v1';
   static const String baseUrlKey = 'magic_mug_api_base_url';
 
   static String baseUrl = defaultBaseUrl;
