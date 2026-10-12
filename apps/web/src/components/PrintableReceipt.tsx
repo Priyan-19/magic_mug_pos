@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { formatDateTime } from '../utils/formatDate';
 import magicMugLogo from '../assets/logo.png';
+import groweraLogo from '../assets/growera_logo.png';
 import html2canvas from 'html2canvas';
 
 interface PrintableReceiptProps {
@@ -317,80 +318,72 @@ export const PrintableReceipt: React.FC<PrintableReceiptProps> = ({ bill, onClos
                 }}
               >
                 <span>TOTAL:</span>
-                <span style={{ fontSize: '15px' }}>₹{parseFloat(bill.total_amount).toFixed(2)}</span>
+                <span>₹{parseFloat(bill.total_amount).toFixed(2)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#71717a', paddingTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#52525b', marginTop: '6px' }}>
                 <span>Payment Mode:</span>
-                <span style={{ fontWeight: 700, color: '#18181b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  {bill.payment_mode}
-                </span>
+                <span style={{ fontWeight: 700, color: '#18181b' }}>{bill.payment_mode}</span>
               </div>
             </div>
 
             {/* Receipt Footer */}
-            <div style={{ textAlign: 'center', paddingTop: '12px', paddingBottom: '4px', fontSize: '10px', color: '#71717a' }}>
-              <div style={{ fontWeight: 700, color: '#18181b', letterSpacing: '0.05em', marginBottom: '3px' }}>
+            <div style={{ textAlign: 'center', paddingTop: '14px', borderTop: '1px dashed #a1a1aa', marginTop: '12px' }}>
+              <div style={{ fontSize: '10px', fontWeight: 800, letterSpacing: '0.08em', color: '#18181b', textTransform: 'uppercase' }}>
                 THANK YOU FOR VISITING!
               </div>
-              <div>Follow us on Instagram @magicmug_cbe</div>
-              <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '8.5px', color: '#71717a' }}>
-                <span style={{ letterSpacing: '0.04em' }}>Powered by</span>
-                <img src="/growera_logo.svg" alt="GROWERA" style={{ height: '13px', objectFit: 'contain', verticalAlign: 'middle' }} />
+              <div style={{ fontSize: '9px', color: '#71717a', marginTop: '3px' }}>
+                Follow us on Instagram @magicmug_cbe
+              </div>
+              <div style={{ fontSize: '7.5px', letterSpacing: '0.12em', color: '#94a3b8', fontWeight: 700, marginTop: '10px', textTransform: 'uppercase' }}>
+                POWERED BY
+              </div>
+              <div style={{ marginTop: '4px', display: 'flex', justifyContent: 'center' }}>
+                <img
+                  src={groweraLogo}
+                  alt="Growera"
+                  style={{ height: '18px', objectFit: 'contain' }}
+                />
               </div>
             </div>
           </div>
         </div>
 
-        {/* Share Options Drawer / Popover */}
+        {/* Quick Share Grid (when Share is active) */}
         {isShareMenuOpen && (
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 animate-slide-up space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <Share2 className="w-3.5 h-3.5 text-maroon-700" />
-                <span>Share Receipt Options</span>
-              </div>
+          <div className="p-3 bg-slate-50 border-t border-slate-100 animate-slide-up">
+            <div className="grid grid-cols-2 gap-2">
+              {/* WhatsApp Direct */}
               <button
-                onClick={() => setIsShareMenuOpen(false)}
-                className="text-[11px] text-slate-400 hover:text-slate-600 font-bold"
+                onClick={handleShareWhatsApp}
+                disabled={isSharingWhatsApp}
+                className="p-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 text-emerald-800 flex items-center gap-2.5 text-xs font-bold transition-all text-left group cursor-pointer shadow-sm hover:shadow"
+                title="Directly share PNG Bill on WhatsApp"
               >
-                Cancel
+                <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <MessageCircle className="w-4 h-4" />
+                </div>
+                <div>
+                  <div>{isSharingWhatsApp ? 'Generating...' : 'WhatsApp'}</div>
+                  <div className="text-[10px] text-emerald-600 font-normal">PNG Bill Image</div>
+                </div>
+              </button>
+
+              {/* PNG Image Export */}
+              <button
+                onClick={handleDownloadPng}
+                disabled={isExportingPng}
+                className="p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200/80 text-amber-900 flex items-center gap-2.5 text-xs font-bold transition-all text-left group cursor-pointer shadow-sm hover:shadow"
+              >
+                <div className="w-7 h-7 rounded-xl bg-amber-600 text-white flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
+                  <Download className="w-4 h-4" />
+                </div>
+                <div>
+                  <div>{isExportingPng ? 'Generating...' : 'Save as PNG'}</div>
+                  <div className="text-[10px] text-amber-700 font-normal">High-res image</div>
+                </div>
               </button>
             </div>
-
-            {/* Quick Share Grid */}
-            <div className="grid grid-cols-2 gap-2">
-                  {/* WhatsApp Direct */}
-                  <button
-                    onClick={handleShareWhatsApp}
-                    disabled={isSharingWhatsApp}
-                    className="p-3 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 text-emerald-800 flex items-center gap-2.5 text-xs font-bold transition-all text-left group cursor-pointer shadow-sm hover:shadow"
-                    title="Directly share PNG Bill on WhatsApp"
-                  >
-                    <div className="w-7 h-7 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                      <MessageCircle className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div>{isSharingWhatsApp ? 'Generating...' : 'WhatsApp'}</div>
-                      <div className="text-[10px] text-emerald-600 font-normal">PNG Bill Image</div>
-                    </div>
-                  </button>
-
-                  {/* PNG Image Export */}
-                  <button
-                    onClick={handleDownloadPng}
-                    disabled={isExportingPng}
-                    className="p-3 rounded-2xl bg-amber-50 hover:bg-amber-100 border border-amber-200/80 text-amber-900 flex items-center gap-2.5 text-xs font-bold transition-all text-left group cursor-pointer shadow-sm hover:shadow"
-                  >
-                    <div className="w-7 h-7 rounded-xl bg-amber-600 text-white flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform">
-                      <Download className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div>{isExportingPng ? 'Generating...' : 'Save as PNG'}</div>
-                      <div className="text-[10px] text-amber-700 font-normal">High-res image</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
+          </div>
         )}
 
               {/* Modal Actions (3-Option Bottom Bar) */}
