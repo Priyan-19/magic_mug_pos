@@ -51,7 +51,7 @@ export interface CartItem {
 
 export interface BillItemSnapshot {
   id: number;
-  product_id: number;
+  product_id?: number | null;
   product_name_snapshot: string;
   unit_price_snapshot: string;
   quantity: number;

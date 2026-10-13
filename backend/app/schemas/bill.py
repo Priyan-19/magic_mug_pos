@@ -18,7 +18,7 @@ class BillCreate(BaseModel):
 
 class BillItemResponse(BaseModel):
     id: int
-    product_id: int
+    product_id: Optional[int] = None
     product_name_snapshot: str
     unit_price_snapshot: Decimal
     quantity: int

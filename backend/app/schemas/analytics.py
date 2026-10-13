@@ -84,7 +84,7 @@ class BestSellerItem(BaseModel):
 
 
 class SlowMoverItem(BaseModel):
-    product_id: int
+    product_id: Optional[int] = None
     product_name: str
     category_name: Optional[str] = None
     selling_price: Decimal
