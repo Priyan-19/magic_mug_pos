@@ -60,7 +60,7 @@ CREATE INDEX IF NOT EXISTS idx_bills_number ON bills(bill_number);
 CREATE TABLE IF NOT EXISTS bill_items (
     id BIGSERIAL PRIMARY KEY,
     bill_id BIGINT NOT NULL REFERENCES bills(id) ON DELETE CASCADE,
-    product_id BIGINT NOT NULL REFERENCES products(id),
+    product_id BIGINT NULL REFERENCES products(id) ON DELETE SET NULL,
     product_name_snapshot VARCHAR(100) NOT NULL,
     unit_price_snapshot NUMERIC(10, 2) NOT NULL,
     quantity INT NOT NULL CHECK (quantity > 0),

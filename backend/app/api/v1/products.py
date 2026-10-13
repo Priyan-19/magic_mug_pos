@@ -229,7 +229,7 @@ async def update_product_stock(
 
 
 @router.delete("/{product_id}")
-async def deactivate_product(
+async def delete_product(
     product_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(["OWNER"]))
@@ -241,14 +241,25 @@ async def deactivate_product(
             detail=f"Product with ID {product_id} not found"
         )
 
-    product.is_active = False
+    # Detach product from past bill items to preserve sales history
+    from sqlalchemy import update
+    from app.models.bill import BillItem
+    await db.execute(
+        update(BillItem)
+        .where(BillItem.product_id == product_id)
+        .values(product_id=None)
+    )
+
+    product_name = product.name
+    await db.delete(product)
+
     await AuditService.log_action(
         db=db,
-        action="PRODUCT_DEACTIVATED",
+        action="PRODUCT_DELETED",
         entity_type="product",
-        entity_id=str(product.id),
-        metadata={"name": product.name},
+        entity_id=str(product_id),
+        metadata={"name": product_name},
         user_id=current_user.id
     )
     await db.commit()
-    return {"success": True, "message": f"Product '{product.name}' deactivated successfully"}
+    return {"success": True, "message": f"Product '{product_name}' deleted permanently"}

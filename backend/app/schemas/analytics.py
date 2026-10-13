@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 
 class TopProductItem(BaseModel):
-    product_id: int
+    product_id: Optional[int] = None
     product_name: str
     total_qty: int
     total_revenue: Decimal
@@ -75,7 +75,7 @@ class MonthlyAnalyticsResponse(BaseModel):
 
 
 class BestSellerItem(BaseModel):
-    product_id: int
+    product_id: Optional[int] = None
     product_name: str
     category_name: Optional[str] = None
     total_qty: int

@@ -25,7 +25,7 @@ const MainLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F4F5F7] flex overflow-hidden font-sans">
+    <div className="min-h-screen min-h-[100dvh] h-screen h-[100dvh] bg-[#F4F5F7] flex overflow-hidden font-sans">
       {/* Left Minimalist Vertical Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -34,7 +34,7 @@ const MainLayout: React.FC = () => {
       />
 
       {/* Main View Area */}
-      <div className="flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
         <TopHeader
           activeTab={activeTab}
           searchTerm={searchTerm}

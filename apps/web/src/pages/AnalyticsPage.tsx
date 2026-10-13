@@ -499,23 +499,17 @@ export const AnalyticsPage: React.FC = () => {
 
                   <div className="text-right flex-shrink-0">
                     {isSoldOut ? (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-700 border border-rose-200 animate-pulse">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                      <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-700 border border-rose-200 animate-pulse">
                         SOLD OUT
                       </span>
                     ) : (
                       <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                        className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                           stock <= 3
                             ? 'bg-amber-50 text-amber-700 border-amber-200'
                             : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         }`}
                       >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            stock <= 3 ? 'bg-amber-500' : 'bg-emerald-500'
-                          }`}
-                        />
                         {stock} Balance
                       </span>
                     )}

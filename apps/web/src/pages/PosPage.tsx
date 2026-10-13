@@ -172,9 +172,9 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
   };
 
   return (
-    <div className="h-full flex flex-col lg:flex-row gap-3 sm:gap-4 lg:gap-6 p-2.5 sm:p-4 lg:p-6 overflow-hidden relative min-h-0">
-      {/* Mobile Top View Switcher (Menu vs Cart) */}
-      <div className="lg:hidden flex items-center bg-slate-200/80 p-1 rounded-2xl flex-shrink-0">
+    <div className="h-full flex flex-col md:flex-row gap-2.5 sm:gap-3.5 md:gap-4 lg:gap-6 p-2 sm:p-3 md:p-4 lg:p-6 overflow-hidden relative min-h-0 touch-manipulation">
+      {/* Mobile Top View Switcher (Only phones < 768px) */}
+      <div className="md:hidden flex items-center bg-slate-200/80 p-1 rounded-2xl flex-shrink-0">
         <button
           onClick={() => setMobileView('menu')}
           className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -202,8 +202,8 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
         </button>
       </div>
 
-      {/* LEFT CATALOG SECTION (Scrollable only: Categories + Select Menu) */}
-      <div className={`flex-1 h-full overflow-y-auto pr-1 sm:pr-2 space-y-4 sm:space-y-6 min-w-0 ${mobileView === 'cart' ? 'hidden lg:block' : 'block'}`}>
+      {/* LEFT CATALOG SECTION (Dual pane on iPad >= 768px) */}
+      <div className={`flex-1 h-full overflow-y-auto pr-1 sm:pr-2 space-y-3 sm:space-y-4 md:space-y-4 lg:space-y-6 min-w-0 ${mobileView === 'cart' ? 'hidden md:block' : 'block'}`}>
         {/* Categories Row */}
         <div>
             <div className="flex items-center justify-between mb-3">
@@ -303,7 +303,7 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 pb-20 lg:pb-0">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2.5 sm:gap-3.5 pb-20 md:pb-0">
                 {filteredProducts.map((prod) => {
                   const inCartQty = cartQtyMap.get(prod.id) || 0;
                   const imgUrl = getProductImage(prod.name, prod.image_url);
@@ -316,7 +316,7 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                     <div
                       key={prod.id}
                       onClick={() => handleAddToCart(prod)}
-                      className={`group bg-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-3 border transition-all duration-200 select-none relative flex flex-col ${
+                      className={`group bg-white rounded-2xl sm:rounded-3xl p-2.5 sm:p-3 border transition-all duration-200 select-none relative flex flex-col touch-manipulation active:scale-[0.98] ${
                         isSoldOut
                           ? 'opacity-70 bg-slate-50/80 border-slate-200 cursor-not-allowed'
                           : inCartQty > 0
@@ -411,12 +411,12 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
           </div>
         </div>
 
-        {/* Mobile Sticky Floating Cart Button */}
+        {/* Mobile Sticky Floating Cart Button (Phones only < 768px) */}
         {mobileView === 'menu' && cartItems.length > 0 && (
-          <div className="lg:hidden fixed bottom-20 left-4 right-4 z-30 animate-slide-up">
+          <div className="md:hidden fixed bottom-20 left-4 right-4 z-30 animate-slide-up">
             <button
               onClick={() => setMobileView('cart')}
-              className="w-full py-3 px-4 bg-maroon-700 hover:bg-maroon-800 text-white rounded-2xl shadow-xl flex items-center justify-between font-bold text-xs sm:text-sm border border-maroon-600/50"
+              className="w-full py-3 px-4 bg-maroon-700 hover:bg-maroon-800 text-white rounded-2xl shadow-xl flex items-center justify-between font-bold text-xs sm:text-sm border border-maroon-600/50 touch-manipulation active:scale-[0.98]"
             >
               <div className="flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-white/20 text-white text-[10px] flex items-center justify-center font-extrabold">
@@ -429,8 +429,8 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
           </div>
         )}
 
-        {/* RIGHT DETAIL ITEMS PANEL */}
-        <div className={`w-full lg:w-[380px] xl:w-[410px] flex-1 lg:flex-initial lg:h-full bg-white rounded-3xl border border-slate-200/80 p-3.5 sm:p-5 flex flex-col justify-between shadow-sm overflow-y-auto lg:overflow-hidden min-h-0 ${mobileView === 'menu' ? 'hidden lg:flex' : 'flex'}`}>
+        {/* RIGHT DETAIL ITEMS PANEL (Side-by-side dual-pane on iPad >= 768px) */}
+        <div className={`w-full md:w-[320px] lg:w-[380px] xl:w-[410px] flex-1 md:flex-initial md:h-full bg-white rounded-3xl border border-slate-200/80 p-3.5 sm:p-4 lg:p-5 flex flex-col justify-between shadow-sm overflow-y-auto md:overflow-hidden min-h-0 ${mobileView === 'menu' ? 'hidden md:flex' : 'flex'}`}>
           {/* Top Section: Header & Cart Items List */}
           <div className="flex flex-col flex-1 min-h-0">
             {/* Header */}
@@ -438,7 +438,7 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
               <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                 <button
                   onClick={() => setMobileView('menu')}
-                  className="lg:hidden px-2 py-1 rounded-lg text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 text-[11px] sm:text-xs font-bold transition-colors flex-shrink-0"
+                  className="md:hidden px-2 py-1 rounded-lg text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 text-[11px] sm:text-xs font-bold transition-colors flex-shrink-0"
                 >
                   ← Menu
                 </button>
@@ -498,14 +498,15 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                         </div>
 
                         {/* Stepper with Stock Limit Guard */}
-                        <div className="flex items-center gap-2 mt-1.5">
+                        <div className="flex items-center gap-2 mt-2">
                           <button
                             onClick={() => updateQuantity(product.id, -1)}
-                            className="w-5 h-5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
+                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-95 touch-manipulation select-none text-slate-600 flex items-center justify-center transition-all"
+                            title="Decrease quantity"
                           >
-                            <Minus className="w-3 h-3" />
+                            <Minus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
                           </button>
-                          <span className="text-xs font-bold text-slate-900 min-w-[14px] text-center font-mono">
+                          <span className="text-xs sm:text-sm font-bold text-slate-900 min-w-[18px] text-center font-mono">
                             {quantity}
                           </span>
                           <button
@@ -526,9 +527,10 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                               product.track_stock &&
                               quantity >= (product.stock_quantity ?? 0)
                             }
-                            className="w-5 h-5 rounded-lg bg-maroon-700 hover:bg-maroon-800 disabled:opacity-40 disabled:hover:bg-maroon-700 text-white flex items-center justify-center transition-colors shadow-sm"
+                            className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-maroon-700 hover:bg-maroon-800 active:scale-95 touch-manipulation select-none disabled:opacity-40 disabled:hover:bg-maroon-700 text-white flex items-center justify-center transition-all shadow-sm"
+                            title="Increase quantity"
                           >
-                            <Plus className="w-3 h-3" />
+                            <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
                           </button>
                         </div>
                       </div>
@@ -550,7 +552,7 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
           </div>
 
           {/* Bottom Financial Breakdown & Payment (permanently pinned & static at bottom) */}
-          <div className="pt-3 pb-3 lg:pb-0 border-t border-slate-100 space-y-3 flex-shrink-0">
+          <div className="pt-3 pb-3 md:pb-0 border-t border-slate-100 space-y-3 flex-shrink-0">
             <div className="space-y-1 text-xs text-slate-500 font-medium">
               <div className="flex justify-between">
                 <span>Item</span>
@@ -605,7 +607,7 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                 <button
                   type="button"
                   onClick={() => setPaymentMode('CASH')}
-                  className={`py-2 px-1.5 rounded-2xl flex flex-col items-center gap-1 text-xs font-bold border transition-all ${
+                  className={`py-2.5 sm:py-3 px-1.5 rounded-2xl flex flex-col items-center gap-1 text-xs font-bold border transition-all touch-manipulation select-none active:scale-95 ${
                     paymentMode === 'CASH'
                       ? 'border-2 border-maroon-700 bg-maroon-50/50 text-maroon-800 shadow-sm'
                       : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
@@ -622,7 +624,7 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                 <button
                   type="button"
                   onClick={() => setPaymentMode('CARD')}
-                  className={`py-2 px-1.5 rounded-2xl flex flex-col items-center gap-1 text-xs font-bold border transition-all ${
+                  className={`py-2.5 sm:py-3 px-1.5 rounded-2xl flex flex-col items-center gap-1 text-xs font-bold border transition-all touch-manipulation select-none active:scale-95 ${
                     paymentMode === 'CARD'
                       ? 'border-2 border-maroon-700 bg-maroon-50/50 text-maroon-800 shadow-sm'
                       : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
@@ -639,7 +641,7 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                 <button
                   type="button"
                   onClick={() => setPaymentMode('UPI')}
-                  className={`py-2 px-1.5 rounded-2xl flex flex-col items-center gap-1 text-xs font-bold border transition-all ${
+                  className={`py-2.5 sm:py-3 px-1.5 rounded-2xl flex flex-col items-center gap-1 text-xs font-bold border transition-all touch-manipulation select-none active:scale-95 ${
                     paymentMode === 'UPI'
                       ? 'border-2 border-maroon-700 bg-maroon-50/50 text-maroon-800 shadow-sm'
                       : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
@@ -675,7 +677,7 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
             <button
               onClick={handleSaveBill}
               disabled={cartItems.length === 0 || isSubmitting}
-              className="w-full py-3.5 rounded-2xl bg-maroon-700 hover:bg-maroon-800 text-white font-extrabold text-sm shadow-glow-maroon transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none active:scale-[0.99]"
+              className="w-full py-3.5 sm:py-4 rounded-2xl bg-maroon-700 hover:bg-maroon-800 text-white font-extrabold text-sm shadow-glow-maroon transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none active:scale-[0.98] touch-manipulation select-none"
             >
               <CheckCircle className="w-5 h-5 stroke-[2.5]" />
               <span>{isSubmitting ? 'Confirming Order...' : 'Confirm & Pay'}</span>

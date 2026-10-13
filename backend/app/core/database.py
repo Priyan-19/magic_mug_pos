@@ -43,8 +43,11 @@ async def init_db() -> None:
         try:
             await conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS track_stock BOOLEAN DEFAULT FALSE;"))
             await conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 0;"))
+            await conn.execute(text("ALTER TABLE bill_items ALTER COLUMN product_id DROP NOT NULL;"))
+            await conn.execute(text("ALTER TABLE bill_items DROP CONSTRAINT IF EXISTS bill_items_product_id_fkey;"))
+            await conn.execute(text("ALTER TABLE bill_items ADD CONSTRAINT bill_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL;"))
         except Exception as e:
-            print(f"[init_db] Column migration check: {e}")
+            print(f"[init_db] Column/FK migration check: {e}")
 
     # Ensure initial cafe admin account exists for production authentication (Zero test data)
     from sqlalchemy import select

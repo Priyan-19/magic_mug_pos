@@ -319,19 +319,19 @@ export const CatalogPage: React.FC = () => {
     }
   };
 
-  const handleDeactivateProduct = async (prod: Product) => {
+  const handleDeleteProduct = async (prod: Product) => {
     if (
       !window.confirm(
-        `Soft deactivate '${prod.name}'? It will be excluded from the POS billing screen, but retained for all past orders.`
+        `Are you sure you want to permanently delete '${prod.name}' from the catalog? This action cannot be undone.`
       )
     )
       return;
     try {
-      await catalogService.deactivateProduct(prod.id);
-      showSuccess('Product Deactivated', `'${prod.name}' soft deactivated`);
+      await catalogService.deleteProduct(prod.id);
+      showSuccess('Product Deleted', `'${prod.name}' has been permanently deleted from catalog`);
       loadData();
     } catch (err: any) {
-      showError('Action Failed', err.message || 'Failed to deactivate product');
+      showError('Delete Failed', err.message || 'Failed to delete product');
     }
   };
 
@@ -495,17 +495,12 @@ export const CatalogPage: React.FC = () => {
                           type="button"
                           onClick={() => handleToggleProductStatus(prod)}
                           title="Click to toggle status on POS"
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all hover:scale-105 ${
+                          className={`inline-flex items-center justify-center px-3.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all hover:scale-105 ${
                             prod.is_active
                               ? 'bg-forest-50 text-forest-700 border border-forest-200 hover:bg-forest-100'
                               : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'
                           }`}
                         >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              prod.is_active ? 'bg-forest-600' : 'bg-slate-400'
-                            }`}
-                          />
                           <span>{prod.is_active ? 'Active' : 'Inactive'}</span>
                         </button>
                       </td>
@@ -553,7 +548,7 @@ export const CatalogPage: React.FC = () => {
                                   disabled={(prod.stock_quantity ?? 0) <= 0}
                                   onClick={() => handleAdjustStock(prod, -1)}
                                   title="Reduce stock by 1"
-                                  className="w-5 h-5 rounded-lg bg-white hover:bg-slate-200 disabled:opacity-30 text-slate-700 flex items-center justify-center font-bold text-xs shadow-xs"
+                                  className="w-6 h-6 rounded-lg bg-white hover:bg-slate-200 active:scale-95 disabled:opacity-30 text-slate-700 flex items-center justify-center font-bold text-xs shadow-xs touch-manipulation select-none"
                                 >
                                   -
                                 </button>
@@ -573,7 +568,7 @@ export const CatalogPage: React.FC = () => {
                                   type="button"
                                   onClick={() => handleAdjustStock(prod, 1)}
                                   title="Add 1 to stock"
-                                  className="w-5 h-5 rounded-lg bg-white hover:bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs shadow-xs"
+                                  className="w-6 h-6 rounded-lg bg-white hover:bg-slate-200 active:scale-95 text-slate-700 flex items-center justify-center font-bold text-xs shadow-xs touch-manipulation select-none"
                                 >
                                   +
                                 </button>
@@ -581,33 +576,25 @@ export const CatalogPage: React.FC = () => {
                                   type="button"
                                   onClick={() => handleAdjustStock(prod, 10)}
                                   title="Quick Add 10 to stock"
-                                  className="px-1.5 h-5 rounded-lg bg-maroon-50 hover:bg-maroon-100 text-maroon-700 font-extrabold text-[10px] transition-colors border border-maroon-100"
+                                  className="px-2 h-6 rounded-lg bg-maroon-50 hover:bg-maroon-100 active:scale-95 text-maroon-700 font-extrabold text-[10px] transition-all border border-maroon-100 touch-manipulation select-none"
                                 >
                                   +10
                                 </button>
                               </div>
 
-                              {/* Availability Status Badge */}
+                              {/* Availability Status Badge without bullet dots */}
                               {(prod.stock_quantity ?? 0) <= 0 ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200 animate-pulse">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                                <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-50 text-rose-700 border border-rose-200 animate-pulse">
                                   SOLD OUT
                                 </span>
                               ) : (
                                 <span
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                  className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
                                     (prod.stock_quantity ?? 0) <= 3
                                       ? 'bg-amber-50 text-amber-700 border-amber-200'
                                       : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                   }`}
                                 >
-                                  <span
-                                    className={`w-1.5 h-1.5 rounded-full ${
-                                      (prod.stock_quantity ?? 0) <= 3
-                                        ? 'bg-amber-500'
-                                        : 'bg-emerald-500'
-                                    }`}
-                                  />
                                   <span>{prod.stock_quantity} Balance</span>
                                 </span>
                               )}
@@ -624,20 +611,18 @@ export const CatalogPage: React.FC = () => {
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => openEditProduct(prod)}
-                            className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                            className="p-1.5 sm:p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
                             title="Edit Dish & Image"
                           >
-                            <Edit2 className="w-3.5 h-3.5" />
+                            <Edit2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                           </button>
-                          {prod.is_active && (
-                            <button
-                              onClick={() => handleDeactivateProduct(prod)}
-                              title="Soft Deactivate"
-                              className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => handleDeleteProduct(prod)}
+                            title="Delete Dish Permanently"
+                            className="p-1.5 sm:p-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1019,17 +1004,12 @@ export const CatalogPage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setProdIsActive(!prodIsActive)}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
+                      className={`flex items-center justify-center px-3.5 py-2 rounded-xl text-xs font-bold transition-all border ${
                         prodIsActive
                           ? 'bg-forest-50 text-forest-700 border-forest-200'
                           : 'bg-slate-100 text-slate-500 border-slate-200'
                       }`}
                     >
-                      <span
-                        className={`w-2 h-2 rounded-full ${
-                          prodIsActive ? 'bg-forest-600' : 'bg-slate-400'
-                        }`}
-                      />
                       <span>{prodIsActive ? 'Active on POS' : 'Hidden from POS'}</span>
                     </button>
                     <span className="text-[10px] text-slate-400 font-medium">

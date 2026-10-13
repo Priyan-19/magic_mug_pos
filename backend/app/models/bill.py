@@ -59,8 +59,8 @@ class BillItem(Base):
     )
     product_id = Column(
         BigInteger().with_variant(Integer, "sqlite"),
-        ForeignKey("products.id"),
-        nullable=False,
+        ForeignKey("products.id", ondelete="SET NULL"),
+        nullable=True,
         index=True
     )
     product_name_snapshot = Column(String(100), nullable=False)

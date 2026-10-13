@@ -45,6 +45,7 @@ export const catalogService = {
     api.put<Product>(`/products/${id}`, payload),
   updateStock: (id: number, payload: { track_stock?: boolean; stock_quantity?: number }) =>
     api.patch<Product>(`/products/${id}/stock`, payload),
+  deleteProduct: (id: number) => api.del<{ success: boolean; message: string }>(`/products/${id}`),
   deactivateProduct: (id: number) => api.del<{ success: boolean; message: string }>(`/products/${id}`),
 };
 
