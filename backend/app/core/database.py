@@ -39,6 +39,12 @@ async def init_db() -> None:
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        from sqlalchemy import text
+        try:
+            await conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS track_stock BOOLEAN DEFAULT FALSE;"))
+            await conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 0;"))
+        except Exception as e:
+            print(f"[init_db] Column migration check: {e}")
 
     # Ensure initial cafe admin account exists for production authentication (Zero test data)
     from sqlalchemy import select
