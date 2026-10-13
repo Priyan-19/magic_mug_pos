@@ -114,7 +114,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
         <div className="text-right hidden sm:block">
           <div className="font-bold text-xs sm:text-sm text-slate-900 leading-tight">
-            {user?.full_name || 'Magic Mug'}
+            {(user?.full_name || 'Magic Mug').replace(/\bcafe\b/gi, '').trim() || 'Magic Mug'}
           </div>
           <div className="text-[10px] text-slate-400 font-medium mt-0.5 md:hidden">
             {dateFormatted} | {timeFormatted}
@@ -123,7 +123,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 
         {/* Avatar */}
         <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-maroon-700 to-maroon-900 text-white font-extrabold flex items-center justify-center shadow-sm text-xs sm:text-sm border-2 border-white ring-1 ring-slate-200 flex-shrink-0">
-          {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'M'}
+          {((user?.full_name || 'Magic Mug').replace(/\bcafe\b/gi, '').trim() || 'M').charAt(0).toUpperCase()}
         </div>
       </div>
     </header>

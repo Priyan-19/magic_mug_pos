@@ -226,7 +226,7 @@ export const PrintableReceipt: React.FC<PrintableReceiptProps> = ({ bill, onClos
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: '#71717a' }}>Cashier:</span>
-                <span style={{ color: '#27272a' }}>{bill.creator_name || 'Cafe Owner (Magic Mug)'}</span>
+                <span style={{ color: '#27272a' }}>{bill.creator_name?.replace(/\bcafe\b/gi, '').trim() || 'Magic Mug'}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '2px' }}>
                 <span style={{ color: '#71717a' }}>Status:</span>

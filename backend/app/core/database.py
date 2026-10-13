@@ -56,6 +56,14 @@ async def init_db() -> None:
 
     async with AsyncSessionLocal() as session:
         try:
+            from sqlalchemy import update
+            # Normalize any 'Magic Mug Cafe' entries to 'Magic Mug'
+            await session.execute(
+                update(User)
+                .where(User.full_name == "Magic Mug Cafe")
+                .values(full_name="Magic Mug")
+            )
+
             stmt = select(User).where(User.username == "admin")
             result = await session.execute(stmt)
             admin_user = result.scalars().first()
@@ -69,7 +77,9 @@ async def init_db() -> None:
                     is_active=True,
                 )
                 session.add(admin_user)
-                await session.commit()
+            elif admin_user.full_name != "Magic Mug":
+                admin_user.full_name = "Magic Mug"
+            await session.commit()
         except Exception as e:
             await session.rollback()
             print(f"[init_db] Admin user check: {e}")

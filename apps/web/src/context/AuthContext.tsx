@@ -18,10 +18,21 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const normalizeUser = (u: User | null): User | null => {
+  if (!u) return null;
+  const cleanName = (u.full_name || 'Magic Mug').replace(/\bcafe\b/gi, '').trim() || 'Magic Mug';
+  return { ...u, full_name: cleanName };
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('magic_mug_user');
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+    try {
+      return normalizeUser(JSON.parse(saved));
+    } catch {
+      return null;
+    }
   });
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('magic_mug_token'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -40,10 +51,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setInitError(false);
       const res = await authService.login(username, password);
+      const cleanUser = normalizeUser(res.user);
       localStorage.setItem('magic_mug_token', res.access_token);
-      localStorage.setItem('magic_mug_user', JSON.stringify(res.user));
+      localStorage.setItem('magic_mug_user', JSON.stringify(cleanUser));
       setToken(res.access_token);
-      setUser(res.user);
+      setUser(cleanUser);
       setIsLoading(false);
       setIsInitializing(false);
       return true;
@@ -68,8 +80,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (storedToken) {
         try {
           const profile = await authService.getMe();
-          setUser(profile);
-          localStorage.setItem('magic_mug_user', JSON.stringify(profile));
+          const cleanUser = normalizeUser(profile);
+          setUser(cleanUser);
+          localStorage.setItem('magic_mug_user', JSON.stringify(cleanUser));
           setIsLoading(false);
           setIsInitializing(false);
           return;
