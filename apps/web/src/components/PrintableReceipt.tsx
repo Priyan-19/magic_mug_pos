@@ -70,10 +70,10 @@ export const PrintableReceipt: React.FC<PrintableReceiptProps> = ({ bill, onClos
 
           const groweraLogoEl = clonedDoc.getElementById('receipt-growera-logo') as HTMLImageElement | null;
           if (groweraLogoEl) {
-            groweraLogoEl.style.width = '72px';
-            groweraLogoEl.style.height = '24px';
-            groweraLogoEl.style.maxWidth = '72px';
-            groweraLogoEl.style.maxHeight = '24px';
+            groweraLogoEl.style.width = '98px';
+            groweraLogoEl.style.height = '33px';
+            groweraLogoEl.style.maxWidth = '98px';
+            groweraLogoEl.style.maxHeight = '33px';
             groweraLogoEl.style.objectFit = 'contain';
             groweraLogoEl.style.display = 'block';
             groweraLogoEl.style.margin = '0 auto';
@@ -349,18 +349,18 @@ export const PrintableReceipt: React.FC<PrintableReceiptProps> = ({ bill, onClos
               <div style={{ fontSize: '8px', letterSpacing: '0.14em', color: '#94a3b8', fontWeight: 700, marginTop: '12px', textTransform: 'uppercase' }}>
                 POWERED BY
               </div>
-              <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <div style={{ marginTop: '6px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <img
                   id="receipt-growera-logo"
                   src={groweraLogo}
                   alt="Growera"
-                  width={72}
-                  height={24}
+                  width={98}
+                  height={33}
                   style={{
-                    height: '24px',
-                    width: '72px',
-                    maxWidth: '72px',
-                    maxHeight: '24px',
+                    height: '33px',
+                    width: '98px',
+                    maxWidth: '120px',
+                    maxHeight: '33px',
                     objectFit: 'contain',
                     display: 'block',
                     margin: '0 auto',
