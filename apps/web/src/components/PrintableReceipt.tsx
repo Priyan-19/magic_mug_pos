@@ -57,15 +57,26 @@ export const PrintableReceipt: React.FC<PrintableReceiptProps> = ({ bill, onClos
           el.style.borderRadius = '16px';
           el.style.border = '1px solid #e2e8f0';
 
-          const imgs = el.getElementsByTagName('img');
-          for (let i = 0; i < imgs.length; i++) {
-            imgs[i].style.width = '80px';
-            imgs[i].style.height = '80px';
-            imgs[i].style.maxWidth = '80px';
-            imgs[i].style.maxHeight = '80px';
-            imgs[i].style.objectFit = 'contain';
-            imgs[i].style.display = 'block';
-            imgs[i].style.margin = '0 auto 8px auto';
+          const headerLogo = clonedDoc.getElementById('receipt-header-logo') as HTMLImageElement | null;
+          if (headerLogo) {
+            headerLogo.style.width = '80px';
+            headerLogo.style.height = '80px';
+            headerLogo.style.maxWidth = '80px';
+            headerLogo.style.maxHeight = '80px';
+            headerLogo.style.objectFit = 'contain';
+            headerLogo.style.display = 'block';
+            headerLogo.style.margin = '0 auto 8px auto';
+          }
+
+          const groweraLogoEl = clonedDoc.getElementById('receipt-growera-logo') as HTMLImageElement | null;
+          if (groweraLogoEl) {
+            groweraLogoEl.style.width = '72px';
+            groweraLogoEl.style.height = '24px';
+            groweraLogoEl.style.maxWidth = '72px';
+            groweraLogoEl.style.maxHeight = '24px';
+            groweraLogoEl.style.objectFit = 'contain';
+            groweraLogoEl.style.display = 'block';
+            groweraLogoEl.style.margin = '0 auto';
           }
         }
       },
@@ -188,6 +199,7 @@ export const PrintableReceipt: React.FC<PrintableReceiptProps> = ({ bill, onClos
             <div className="text-center pb-3.5" style={{ borderBottom: '1px dashed #a1a1aa' }}>
               <div style={{ width: '80px', height: '80px', margin: '0 auto 8px auto' }}>
                 <img
+                  id="receipt-header-logo"
                   src={magicMugLogo}
                   alt="Magic Mug"
                   width={80}
@@ -339,14 +351,19 @@ export const PrintableReceipt: React.FC<PrintableReceiptProps> = ({ bill, onClos
               </div>
               <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 <img
+                  id="receipt-growera-logo"
                   src={groweraLogo}
                   alt="Growera"
+                  width={72}
+                  height={24}
                   style={{
                     height: '24px',
-                    width: 'auto',
-                    maxWidth: '130px',
+                    width: '72px',
+                    maxWidth: '72px',
+                    maxHeight: '24px',
                     objectFit: 'contain',
                     display: 'block',
+                    margin: '0 auto',
                   }}
                 />
               </div>
