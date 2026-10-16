@@ -125,7 +125,7 @@ async def test_scenario_3_inactive_product_rejection(client: AsyncClient, db_ses
     assert prod is not None
 
     # Deactivate product
-    deact_res = await client.delete(f"/api/v1/products/{prod.id}", headers=headers)
+    deact_res = await client.put(f"/api/v1/products/{prod.id}", json={"is_active": False}, headers=headers)
     assert deact_res.status_code == 200
 
     # Attempt to bill deactivated product

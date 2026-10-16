@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS products (
     selling_price NUMERIC(10, 2) NOT NULL CHECK (selling_price >= 0),
     image_url TEXT NULL,
     is_active BOOLEAN DEFAULT TRUE NOT NULL,
+    track_stock BOOLEAN DEFAULT FALSE NOT NULL,
+    stock_quantity INT DEFAULT 0 NOT NULL,
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
