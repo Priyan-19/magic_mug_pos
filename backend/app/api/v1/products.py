@@ -10,7 +10,6 @@ from app.models.category import Category
 from app.models.user import User
 from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
 from app.services.auth_service import get_current_user, require_role
-from app.services.audit_service import AuditService
 
 router = APIRouter(prefix="/products", tags=["Products"])
 
@@ -100,22 +99,6 @@ async def create_product(
         stock_quantity=payload.stock_quantity if payload.track_stock else 0
     )
     db.add(product)
-    await db.flush()
-
-    await AuditService.log_action(
-        db=db,
-        action="PRODUCT_CREATED",
-        entity_type="product",
-        entity_id=str(product.id),
-        metadata={
-            "name": product.name,
-            "selling_price": str(product.selling_price),
-            "category_id": product.category_id,
-            "track_stock": product.track_stock,
-            "stock_quantity": product.stock_quantity
-        },
-        user_id=current_user.id
-    )
     await db.commit()
     await db.refresh(product)
 
@@ -164,21 +147,6 @@ async def update_product(
     if payload.stock_quantity is not None:
         product.stock_quantity = max(0, payload.stock_quantity)
 
-    await AuditService.log_action(
-        db=db,
-        action="PRODUCT_UPDATED",
-        entity_type="product",
-        entity_id=str(product.id),
-        metadata={
-            "name": product.name,
-            "old_price": old_price,
-            "new_price": str(product.selling_price),
-            "is_active": product.is_active,
-            "track_stock": product.track_stock,
-            "stock_quantity": product.stock_quantity
-        },
-        user_id=current_user.id
-    )
     await db.commit()
     await db.refresh(product)
 
@@ -207,18 +175,6 @@ async def update_product_stock(
     if payload.stock_quantity is not None:
         product.stock_quantity = max(0, payload.stock_quantity)
 
-    await AuditService.log_action(
-        db=db,
-        action="PRODUCT_STOCK_UPDATED",
-        entity_type="product",
-        entity_id=str(product.id),
-        metadata={
-            "name": product.name,
-            "track_stock": product.track_stock,
-            "stock_quantity": product.stock_quantity
-        },
-        user_id=current_user.id
-    )
     await db.commit()
     await db.refresh(product)
 
@@ -252,14 +208,5 @@ async def delete_product(
 
     product_name = product.name
     await db.delete(product)
-
-    await AuditService.log_action(
-        db=db,
-        action="PRODUCT_DELETED",
-        entity_type="product",
-        entity_id=str(product_id),
-        metadata={"name": product_name},
-        user_id=current_user.id
-    )
     await db.commit()
     return {"success": True, "message": f"Product '{product_name}' deleted permanently"}

@@ -9,7 +9,6 @@ from app.models.product import Product
 from app.models.user import User
 from app.schemas.category import CategoryCreate, CategoryUpdate, CategoryResponse
 from app.services.auth_service import get_current_user, require_role
-from app.services.audit_service import AuditService
 
 router = APIRouter(prefix="/categories", tags=["Categories"])
 
@@ -68,16 +67,6 @@ async def create_category(
         is_active=payload.is_active
     )
     db.add(category)
-    await db.flush()
-
-    await AuditService.log_action(
-        db=db,
-        action="CATEGORY_CREATED",
-        entity_type="category",
-        entity_id=str(category.id),
-        metadata={"name": category.name},
-        user_id=current_user.id
-    )
     await db.commit()
     await db.refresh(category)
 
@@ -117,14 +106,6 @@ async def update_category(
     if payload.is_active is not None:
         category.is_active = payload.is_active
 
-    await AuditService.log_action(
-        db=db,
-        action="CATEGORY_UPDATED",
-        entity_type="category",
-        entity_id=str(category.id),
-        metadata={"name": category.name, "is_active": category.is_active},
-        user_id=current_user.id
-    )
     await db.commit()
     await db.refresh(category)
 
@@ -132,7 +113,7 @@ async def update_category(
 
 
 @router.delete("/{category_id}")
-async def deactivate_category(
+async def delete_category(
     category_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(["OWNER"]))
@@ -144,14 +125,28 @@ async def deactivate_category(
             detail=f"Category with ID {category_id} not found"
         )
 
-    category.is_active = False
-    await AuditService.log_action(
-        db=db,
-        action="CATEGORY_DEACTIVATED",
-        entity_type="category",
-        entity_id=str(category.id),
-        metadata={"name": category.name},
-        user_id=current_user.id
-    )
+    category_name = category.name
+
+    # Check for any products in this category
+    prod_stmt = select(Product).where(Product.category_id == category_id)
+    prod_res = await db.execute(prod_stmt)
+    products = prod_res.scalars().all()
+
+    if products:
+        prod_ids = [p.id for p in products]
+        # Detach product from past bill items to preserve sales history
+        from sqlalchemy import update
+        from app.models.bill import BillItem
+        await db.execute(
+            update(BillItem)
+            .where(BillItem.product_id.in_(prod_ids))
+            .values(product_id=None)
+        )
+        # Delete products under this category
+        for p in products:
+            await db.delete(p)
+        await db.flush()
+
+    await db.delete(category)
     await db.commit()
-    return {"success": True, "message": f"Category '{category.name}' deactivated successfully"}
+    return {"success": True, "message": f"Category '{category_name}' deleted permanently"}

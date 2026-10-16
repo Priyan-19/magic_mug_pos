@@ -203,22 +203,3 @@ export interface SlowMoverItem {
   total_revenue: string;
   days_window: number;
 }
-
-// Audit Types
-export interface AuditLog {
-  id: number;
-  user_id?: number;
-  username?: string;
-  action: string;
-  entity_type: string;
-  entity_id: string;
-  metadata: Record<string, any>;
-  created_at: string;
-}
-
-export interface AuditLogListResponse {
-  items: AuditLog[];
-  total: number;
-  page: number;
-  limit: number;
-}

@@ -72,7 +72,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder={searchPlaceholder}
-          className="w-full pl-9 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-2.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-maroon-700/60 rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-maroon-700/10 transition-all shadow-sm"
+          className="w-full pl-10 sm:pl-11 pr-3 sm:pr-4 py-2 sm:py-2.5 bg-slate-50 hover:bg-slate-100/70 focus:bg-white border border-slate-200 focus:border-maroon-700/60 rounded-2xl text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-maroon-700/10 transition-all shadow-sm"
         />
         {searchTerm && (
           <button

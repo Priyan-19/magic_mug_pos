@@ -9,7 +9,6 @@ from app.models.bill import Bill, BillItem
 from app.models.product import Product
 from app.models.user import User
 from app.schemas.bill import BillCreate, BillVoidRequest
-from app.services.audit_service import AuditService
 
 
 from zoneinfo import ZoneInfo
@@ -106,22 +105,6 @@ class BillingService:
         )
         db.add(bill)
         await db.flush()
-
-        # Audit log creation
-        await AuditService.log_action(
-            db=db,
-            action="BILL_CREATED",
-            entity_type="bill",
-            entity_id=str(bill.id),
-            metadata={
-                "bill_number": bill.bill_number,
-                "total_amount": str(bill.total_amount),
-                "item_count": len(bill.items),
-                "payment_mode": bill.payment_mode
-            },
-            user_id=user_id
-        )
-
         return bill
 
     @staticmethod
@@ -227,21 +210,6 @@ class BillingService:
             prod = await db.get(Product, item.product_id)
             if prod and prod.track_stock:
                 prod.stock_quantity += item.quantity
-
-        # Add audit log
-        await AuditService.log_action(
-            db=db,
-            action="BILL_VOIDED",
-            entity_type="bill",
-            entity_id=str(bill.id),
-            metadata={
-                "bill_number": bill.bill_number,
-                "reason": payload.reason,
-                "total_amount": str(bill.total_amount),
-                "voided_at": now.isoformat()
-            },
-            user_id=user_id
-        )
 
         await db.flush()
         return bill

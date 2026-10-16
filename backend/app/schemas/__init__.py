@@ -19,7 +19,6 @@ from app.schemas.analytics import (
     BestSellerItem,
     SlowMoverItem
 )
-from app.schemas.audit import AuditLogResponse, AuditLogListResponse
 
 __all__ = [
     "StandardErrorResponse",
@@ -51,7 +50,5 @@ __all__ = [
     "WeeklyAnalyticsResponse",
     "MonthlyAnalyticsResponse",
     "BestSellerItem",
-    "SlowMoverItem",
-    "AuditLogResponse",
-    "AuditLogListResponse"
+    "SlowMoverItem"
 ]

@@ -36,6 +36,7 @@ export const CatalogPage: React.FC = () => {
   const [catName, setCatName] = useState('');
   const [catDesc, setCatDesc] = useState('');
   const [catOrder, setCatOrder] = useState(0);
+  const [catIsActive, setCatIsActive] = useState(true);
 
   // Product Modal
   const [isProdModalOpen, setIsProdModalOpen] = useState(false);
@@ -84,6 +85,7 @@ export const CatalogPage: React.FC = () => {
           name: catName,
           description: catDesc,
           display_order: catOrder,
+          is_active: catIsActive,
         });
         showSuccess('Category Updated', `Updated '${catName}'`);
       } else {
@@ -91,6 +93,7 @@ export const CatalogPage: React.FC = () => {
           name: catName,
           description: catDesc,
           display_order: catOrder,
+          is_active: catIsActive,
         });
         showSuccess('Category Created', `Created '${catName}'`);
       }
@@ -99,21 +102,44 @@ export const CatalogPage: React.FC = () => {
       setCatName('');
       setCatDesc('');
       setCatOrder(0);
+      setCatIsActive(true);
       loadData();
     } catch (err: any) {
       showError('Save Failed', err.message || 'Failed to save category');
     }
   };
 
-  const handleDeactivateCategory = async (cat: Category) => {
-    if (!window.confirm(`Deactivate category '${cat.name}'? Existing products will remain intact.`))
-      return;
+  const handleDeleteCategory = async (cat: Category) => {
+    const hasProducts = (cat.product_count ?? 0) > 0;
+    const confirmMessage = hasProducts
+      ? `Are you sure you want to permanently delete category '${cat.name}' and all ${cat.product_count} product(s) in it? This action cannot be undone.`
+      : `Are you sure you want to permanently delete category '${cat.name}'? This action cannot be undone.`;
+
+    if (!window.confirm(confirmMessage)) return;
+
     try {
-      await catalogService.deactivateCategory(cat.id);
-      showSuccess('Category Deactivated', `'${cat.name}' is now inactive`);
+      await catalogService.deleteCategory(cat.id);
+      showSuccess(
+        'Category Deleted',
+        `'${cat.name}' has been permanently deleted from catalog`
+      );
       loadData();
     } catch (err: any) {
-      showError('Action Failed', err.message || 'Failed to deactivate category');
+      showError('Delete Failed', err.message || 'Failed to delete category');
+    }
+  };
+
+  const handleToggleCategoryStatus = async (cat: Category) => {
+    try {
+      const nextStatus = !cat.is_active;
+      await catalogService.updateCategory(cat.id, { is_active: nextStatus });
+      showSuccess(
+        nextStatus ? 'Category Activated' : 'Category Deactivated',
+        `'${cat.name}' is now ${nextStatus ? 'active' : 'inactive'}`
+      );
+      loadData();
+    } catch (err: any) {
+      showError('Update Failed', err.message || 'Failed to update category status');
     }
   };
 
@@ -401,6 +427,7 @@ export const CatalogPage: React.FC = () => {
                 setCatName('');
                 setCatDesc('');
                 setCatOrder(categories.length + 1);
+                setCatIsActive(true);
                 setIsCatModalOpen(true);
               }}
               className="flex-shrink-0 flex items-center gap-1.5 px-3.5 py-2 sm:py-2.5 rounded-2xl bg-maroon-700 hover:bg-maroon-800 text-white text-xs font-bold shadow-glow-maroon transition-all"
@@ -423,7 +450,7 @@ export const CatalogPage: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search products..."
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 focus:border-maroon-700 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none"
+                className="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 focus:border-maroon-700 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none"
               />
             </div>
             <div className="w-full sm:w-64">
@@ -662,15 +689,18 @@ export const CatalogPage: React.FC = () => {
                       {cat.product_count || 0}
                     </td>
                     <td className="py-3.5 px-5 text-center">
-                      <span
-                        className={`inline-flex px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      <button
+                        type="button"
+                        onClick={() => handleToggleCategoryStatus(cat)}
+                        title={`Click to ${cat.is_active ? 'deactivate' : 'activate'} category`}
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all hover:scale-105 cursor-pointer ${
                           cat.is_active
-                            ? 'bg-forest-50 text-forest-700 border border-forest-200'
-                            : 'bg-slate-100 text-slate-500 border border-slate-200'
+                            ? 'bg-forest-50 text-forest-700 border border-forest-200 hover:bg-forest-100'
+                            : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'
                         }`}
                       >
                         {cat.is_active ? 'Active' : 'Inactive'}
-                      </span>
+                      </button>
                     </td>
                     <td className="py-3.5 px-5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
@@ -680,21 +710,21 @@ export const CatalogPage: React.FC = () => {
                             setCatName(cat.name);
                             setCatDesc(cat.description || '');
                             setCatOrder(cat.display_order);
+                            setCatIsActive(cat.is_active);
                             setIsCatModalOpen(true);
                           }}
                           className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                          title="Edit Category"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
-                        {cat.is_active && (
-                          <button
-                            onClick={() => handleDeactivateCategory(cat)}
-                            title="Soft Deactivate"
-                            className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => handleDeleteCategory(cat)}
+                          title="Delete Category Permanently"
+                          className="p-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -751,6 +781,30 @@ export const CatalogPage: React.FC = () => {
                   onChange={(e) => setCatOrder(parseInt(e.target.value) || 0)}
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-maroon-700 rounded-xl text-xs font-mono text-slate-900 focus:outline-none"
                 />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                <div>
+                  <div className="text-xs font-bold text-slate-800">Category Status</div>
+                  <div className="text-[11px] text-slate-500">
+                    {catIsActive ? 'Active (Items visible on POS)' : 'Inactive (Items hidden from POS)'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={catIsActive}
+                  onClick={() => setCatIsActive(!catIsActive)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    catIsActive ? 'bg-forest-600' : 'bg-slate-300'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                      catIsActive ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2">

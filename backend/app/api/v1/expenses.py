@@ -15,7 +15,6 @@ from app.schemas.expense import (
     ExpenseListResponse
 )
 from app.services.auth_service import require_role
-from app.services.audit_service import AuditService
 
 router = APIRouter(prefix="/expenses", tags=["Expenses"])
 
@@ -80,20 +79,6 @@ async def create_expense(
         created_by=current_user.id
     )
     db.add(expense)
-    await db.flush()
-
-    await AuditService.log_action(
-        db=db,
-        action="EXPENSE_CREATED",
-        entity_type="expense",
-        entity_id=str(expense.id),
-        metadata={
-            "category": expense.category,
-            "amount": str(expense.amount),
-            "date": expense.expense_date.isoformat()
-        },
-        user_id=current_user.id
-    )
     await db.commit()
     await db.refresh(expense)
 
@@ -125,18 +110,6 @@ async def update_expense(
     if payload.expense_date is not None:
         expense.expense_date = payload.expense_date
 
-    await AuditService.log_action(
-        db=db,
-        action="EXPENSE_UPDATED",
-        entity_type="expense",
-        entity_id=str(expense.id),
-        metadata={
-            "category": expense.category,
-            "amount": str(expense.amount),
-            "date": expense.expense_date.isoformat()
-        },
-        user_id=current_user.id
-    )
     await db.commit()
     await db.refresh(expense)
 
@@ -157,19 +130,6 @@ async def delete_expense(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Expense with ID {expense_id} not found"
         )
-
-    await AuditService.log_action(
-        db=db,
-        action="EXPENSE_DELETED",
-        entity_type="expense",
-        entity_id=str(expense.id),
-        metadata={
-            "category": expense.category,
-            "amount": str(expense.amount),
-            "description": expense.description
-        },
-        user_id=current_user.id
-    )
 
     await db.delete(expense)
     await db.commit()

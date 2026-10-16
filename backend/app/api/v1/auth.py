@@ -4,7 +4,6 @@ from app.core.database import get_db
 from app.core.security import create_access_token
 from app.schemas.auth import LoginRequest, TokenResponse, UserResponse
 from app.services.auth_service import AuthService, get_current_user
-from app.services.audit_service import AuditService
 from app.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -24,17 +23,6 @@ async def login(
         )
     
     access_token = create_access_token(subject=str(user.id))
-
-    # Log login action
-    await AuditService.log_action(
-        db=db,
-        action="USER_LOGIN",
-        entity_type="user",
-        entity_id=str(user.id),
-        metadata={"username": user.username, "role": user.role},
-        user_id=user.id
-    )
-    await db.commit()
 
     return TokenResponse(
         access_token=access_token,

@@ -13,7 +13,6 @@ import {
   MonthlyAnalytics,
   BestSellerItem,
   SlowMoverItem,
-  AuditLogListResponse,
 } from '../types';
 
 export const authService = {
@@ -25,10 +24,11 @@ export const authService = {
 export const catalogService = {
   getCategories: (includeInactive = false) =>
     api.get<Category[]>(`/categories?include_inactive=${includeInactive}`),
-  createCategory: (payload: { name: string; description?: string; display_order?: number }) =>
+  createCategory: (payload: { name: string; description?: string; display_order?: number; is_active?: boolean }) =>
     api.post<Category>('/categories', payload),
   updateCategory: (id: number, payload: Partial<Category>) =>
     api.put<Category>(`/categories/${id}`, payload),
+  deleteCategory: (id: number) => api.del<{ success: boolean; message: string }>(`/categories/${id}`),
   deactivateCategory: (id: number) => api.del<{ success: boolean; message: string }>(`/categories/${id}`),
 
   getProducts: (params?: { category_id?: number; active_only?: boolean; search?: string }) => {
@@ -125,16 +125,5 @@ export const analyticsService = {
     if (params?.limit) q.append('limit', params.limit.toString());
     if (params?.days) q.append('days', params.days.toString());
     return api.get<SlowMoverItem[]>(`/analytics/slow-movers?${q.toString()}`);
-  },
-};
-
-export const auditService = {
-  getLogs: (params?: { page?: number; limit?: number; action?: string; entity_type?: string }) => {
-    const q = new URLSearchParams();
-    if (params?.page) q.append('page', params.page.toString());
-    if (params?.limit) q.append('limit', params.limit.toString());
-    if (params?.action) q.append('action', params.action);
-    if (params?.entity_type) q.append('entity_type', params.entity_type);
-    return api.get<AuditLogListResponse>(`/audit/logs?${q.toString()}`);
   },
 };

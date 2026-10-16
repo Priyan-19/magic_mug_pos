@@ -4,6 +4,9 @@ import {
   Plus,
   Trash2,
   TrendingDown,
+  Calendar,
+  X,
+  RotateCcw,
 } from 'lucide-react';
 import { Expense } from '../types';
 import { expenseService } from '../services/cafeServices';
@@ -138,40 +141,90 @@ export const ExpensesPage: React.FC = () => {
       </div>
 
       {/* Filter Bar */}
-      <div className="p-3 sm:p-4 rounded-2xl sm:rounded-3xl bg-white border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
-        <div className="w-full sm:w-64">
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-maroon-700 rounded-xl text-xs text-slate-800 focus:outline-none"
-          >
-            <option value="">All Expense Categories</option>
-            {standardCategories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="grid grid-cols-2 sm:contents w-full gap-2">
-          <div className="w-full sm:w-48">
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-maroon-700 rounded-xl text-xs text-slate-800 focus:outline-none"
-            />
+      <div className="p-3 sm:p-5 rounded-2xl sm:rounded-3xl bg-white border border-slate-200/80 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
+          <div className="w-full sm:w-64 min-w-0">
+            <select
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+              className="w-full h-[44px] px-3 bg-slate-50 border border-slate-200 focus:border-maroon-700 focus:ring-1 focus:ring-maroon-700/20 rounded-xl text-xs font-medium text-slate-800 focus:outline-none transition-all cursor-pointer"
+            >
+              <option value="">All Expense Categories</option>
+              {standardCategories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div className="w-full sm:w-48">
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 focus:border-maroon-700 rounded-xl text-xs text-slate-800 focus:outline-none"
-            />
+          <div className="grid grid-cols-2 w-full sm:w-auto flex-1 gap-2.5 sm:gap-3">
+            {/* Start Date Filter */}
+            <div className="relative flex items-center bg-slate-50 border border-slate-200 focus-within:border-maroon-700 focus-within:ring-1 focus-within:ring-maroon-700/20 rounded-xl px-3 py-1.5 h-[44px] min-w-0 transition-all">
+              <Calendar className="w-4 h-4 text-slate-400 mr-2 flex-shrink-0 pointer-events-none" />
+              <div className="flex flex-col min-w-0 flex-1 justify-center">
+                <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-none mb-0.5 select-none">
+                  From Date
+                </span>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full bg-transparent text-xs font-semibold text-slate-800 focus:outline-none p-0 cursor-pointer min-w-0"
+                />
+              </div>
+              {startDate && (
+                <button
+                  type="button"
+                  onClick={() => setStartDate('')}
+                  className="p-1 hover:bg-slate-200/70 rounded-full text-slate-400 hover:text-rose-600 transition-colors ml-1 flex-shrink-0"
+                  title="Clear from date"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* End Date Filter */}
+            <div className="relative flex items-center bg-slate-50 border border-slate-200 focus-within:border-maroon-700 focus-within:ring-1 focus-within:ring-maroon-700/20 rounded-xl px-3 py-1.5 h-[44px] min-w-0 transition-all">
+              <Calendar className="w-4 h-4 text-slate-400 mr-2 flex-shrink-0 pointer-events-none" />
+              <div className="flex flex-col min-w-0 flex-1 justify-center">
+                <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 leading-none mb-0.5 select-none">
+                  To Date
+                </span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full bg-transparent text-xs font-semibold text-slate-800 focus:outline-none p-0 cursor-pointer min-w-0"
+                />
+              </div>
+              {endDate && (
+                <button
+                  type="button"
+                  onClick={() => setEndDate('')}
+                  className="p-1 hover:bg-slate-200/70 rounded-full text-slate-400 hover:text-rose-600 transition-colors ml-1 flex-shrink-0"
+                  title="Clear to date"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
           </div>
+
+          {(categoryFilter || startDate || endDate) && (
+            <button
+              type="button"
+              onClick={() => {
+                setCategoryFilter('');
+                setStartDate('');
+                setEndDate('');
+              }}
+              className="px-2.5 py-2 text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-xl font-semibold flex items-center gap-1 transition-colors self-end sm:self-center flex-shrink-0"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Reset
+            </button>
+          )}
         </div>
       </div>
 

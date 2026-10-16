@@ -3,14 +3,22 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.orm import declarative_base
 from app.core.config import settings
 
-# PostgreSQL Async Engine configuration
+# Engine configuration (supports PostgreSQL and SQLite)
+is_sqlite = "sqlite" in settings.async_database_url
+engine_kwargs = {
+    "echo": False,
+    "future": True,
+}
+if not is_sqlite:
+    engine_kwargs.update({
+        "pool_pre_ping": True,
+        "pool_size": 10,
+        "max_overflow": 20,
+    })
+
 engine = create_async_engine(
     settings.async_database_url,
-    echo=False,
-    future=True,
-    pool_pre_ping=True,
-    pool_size=10,
-    max_overflow=20,
+    **engine_kwargs
 )
 
 # Async session factory
@@ -39,15 +47,17 @@ async def init_db() -> None:
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        from sqlalchemy import text
-        try:
-            await conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS track_stock BOOLEAN DEFAULT FALSE;"))
-            await conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 0;"))
-            await conn.execute(text("ALTER TABLE bill_items ALTER COLUMN product_id DROP NOT NULL;"))
-            await conn.execute(text("ALTER TABLE bill_items DROP CONSTRAINT IF EXISTS bill_items_product_id_fkey;"))
-            await conn.execute(text("ALTER TABLE bill_items ADD CONSTRAINT bill_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL;"))
-        except Exception as e:
-            print(f"[init_db] Column/FK migration check: {e}")
+        if not is_sqlite:
+            from sqlalchemy import text
+            try:
+                await conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS track_stock BOOLEAN DEFAULT FALSE;"))
+                await conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS stock_quantity INTEGER DEFAULT 0;"))
+                await conn.execute(text("ALTER TABLE bill_items ALTER COLUMN product_id DROP NOT NULL;"))
+                await conn.execute(text("ALTER TABLE bill_items DROP CONSTRAINT IF EXISTS bill_items_product_id_fkey;"))
+                await conn.execute(text("ALTER TABLE bill_items ADD CONSTRAINT bill_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL;"))
+            except Exception as e:
+                print(f"[init_db] Column/FK migration check: {e}")
+
 
     # Ensure initial cafe admin account exists for production authentication (Zero test data)
     from sqlalchemy import select
