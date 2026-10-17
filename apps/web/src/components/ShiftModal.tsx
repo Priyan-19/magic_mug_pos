@@ -162,7 +162,6 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                 </h3>
                 {currentShift?.status === 'OPEN' ? (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-forest-50 text-forest-700 border border-forest-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-forest-600 animate-pulse" />
                     Register Open
                   </span>
                 ) : (

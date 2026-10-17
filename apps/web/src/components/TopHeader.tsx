@@ -124,10 +124,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-2xl bg-forest-50 hover:bg-forest-100/90 border border-forest-200/90 text-forest-900 text-[11px] sm:text-xs font-bold transition-all shadow-xs cursor-pointer group active:scale-95"
             title="Shift Register Active - Click to view Today's Cashflow or Close Shift"
           >
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-forest-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-forest-600"></span>
-            </span>
             <Wallet className="w-3.5 h-3.5 text-forest-700" />
             <span className="hidden sm:inline">Register:</span>
             <span className="font-mono text-forest-950 font-extrabold bg-forest-100/80 px-1.5 py-0.5 rounded-lg border border-forest-200">
@@ -141,7 +137,6 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-2xl bg-amber-50 hover:bg-amber-100/90 border border-amber-200 text-amber-900 text-[11px] sm:text-xs font-bold transition-all shadow-xs cursor-pointer group active:scale-95"
             title="Register Closed - Click to Enter Float & Open Register"
           >
-            <span className="h-2 w-2 rounded-full bg-amber-400"></span>
             <Wallet className="w-3.5 h-3.5 text-amber-700" />
             <span className="whitespace-nowrap">Open Register</span>
           </button>
