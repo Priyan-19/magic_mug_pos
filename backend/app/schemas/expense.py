@@ -8,6 +8,7 @@ class ExpenseBase(BaseModel):
     category: str = Field(..., min_length=1, max_length=50, examples=["Milk & Dairy"])
     description: str = Field(..., min_length=1, max_length=500, examples=["Full cream milk 10L"])
     amount: Decimal = Field(..., gt=Decimal("0.00"), examples=[Decimal("650.00")])
+    payment_mode: str = Field("CASH", pattern="^(CASH|UPI|CARD|BANK_TRANSFER)$")
     expense_date: date = Field(default_factory=date.today)
 
 
@@ -19,6 +20,7 @@ class ExpenseUpdate(BaseModel):
     category: Optional[str] = Field(None, min_length=1, max_length=50)
     description: Optional[str] = Field(None, min_length=1, max_length=500)
     amount: Optional[Decimal] = Field(None, gt=Decimal("0.00"))
+    payment_mode: Optional[str] = Field(None, pattern="^(CASH|UPI|CARD|BANK_TRANSFER)$")
     expense_date: Optional[date] = None
 
 

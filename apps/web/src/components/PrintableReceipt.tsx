@@ -336,6 +336,16 @@ export const PrintableReceipt: React.FC<PrintableReceiptProps> = ({ bill, onClos
                 <span>Payment Mode:</span>
                 <span style={{ fontWeight: 700, color: '#18181b' }}>{bill.payment_mode}</span>
               </div>
+              {bill.payment_mode === 'SPLIT' && bill.split_details && Object.keys(bill.split_details).length > 0 && (
+                <div style={{ padding: '4px 0 2px 8px', fontSize: '10px', color: '#52525b', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  {Object.entries(bill.split_details).map(([mode, amt]) => (
+                    <div key={mode} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>• {mode}:</span>
+                      <span style={{ fontWeight: 600, color: '#18181b' }}>₹{parseFloat(amt as any || 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Receipt Footer */}

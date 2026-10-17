@@ -71,11 +71,18 @@ async def create_expense(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_role(["OWNER"]))
 ):
+    # Check if an active shift is open to associate the expense
+    from app.models.shift import Shift
+    shift_stmt = select(Shift.id).where(Shift.status == "OPEN").order_by(Shift.id.desc())
+    active_shift_id = (await db.execute(shift_stmt)).scalars().first()
+
     expense = Expense(
         category=payload.category.strip(),
         description=payload.description.strip(),
         amount=payload.amount,
+        payment_mode=payload.payment_mode or "CASH",
         expense_date=payload.expense_date,
+        shift_id=active_shift_id,
         created_by=current_user.id
     )
     db.add(expense)

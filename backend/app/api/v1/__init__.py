@@ -5,6 +5,7 @@ from app.api.v1.products import router as products_router
 from app.api.v1.bills import router as bills_router
 from app.api.v1.expenses import router as expenses_router
 from app.api.v1.analytics import router as analytics_router
+from app.api.v1.shifts import router as shifts_router
 
 api_v1_router = APIRouter(prefix="/api/v1")
 
@@ -14,3 +15,4 @@ api_v1_router.include_router(products_router)
 api_v1_router.include_router(bills_router)
 api_v1_router.include_router(expenses_router)
 api_v1_router.include_router(analytics_router)
+api_v1_router.include_router(shifts_router)

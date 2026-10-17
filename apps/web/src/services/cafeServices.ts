@@ -13,6 +13,9 @@ import {
   MonthlyAnalytics,
   BestSellerItem,
   SlowMoverItem,
+  ShiftCashflowSummary,
+  ShiftOpenRequest,
+  ShiftCloseRequest,
 } from '../types';
 
 export const authService = {
@@ -51,7 +54,8 @@ export const catalogService = {
 
 export const billingService = {
   createBill: (payload: {
-    payment_mode: 'CASH' | 'CARD' | 'UPI';
+    payment_mode: 'CASH' | 'CARD' | 'UPI' | 'SPLIT';
+    split_details?: { cash?: number | string; upi?: number | string; card?: number | string };
     discount_amount?: string;
     tax_amount?: string;
     items: { product_id: number; quantity: number }[];
@@ -126,4 +130,11 @@ export const analyticsService = {
     if (params?.days) q.append('days', params.days.toString());
     return api.get<SlowMoverItem[]>(`/analytics/slow-movers?${q.toString()}`);
   },
+};
+
+export const shiftService = {
+  getCurrentShift: () => api.get<ShiftCashflowSummary | null>('/shifts/current'),
+  openShift: (payload: ShiftOpenRequest) => api.post<ShiftCashflowSummary>('/shifts/open', payload),
+  closeShift: (payload: ShiftCloseRequest) => api.post<ShiftCashflowSummary>('/shifts/close', payload),
+  getHistory: (limit = 15) => api.get<ShiftCashflowSummary[]>(`/shifts/history?limit=${limit}`),
 };

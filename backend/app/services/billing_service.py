@@ -91,6 +91,11 @@ class BillingService:
         total = subtotal - discount + tax
         bill_number = await BillingService.generate_bill_number(db, now)
 
+        # Check if an active shift is open to associate the bill
+        from app.models.shift import Shift
+        shift_stmt = select(Shift.id).where(Shift.status == "OPEN").order_by(Shift.id.desc())
+        active_shift_id = (await db.execute(shift_stmt)).scalars().first()
+
         bill = Bill(
             bill_number=bill_number,
             bill_date=now,
@@ -99,6 +104,8 @@ class BillingService:
             tax_amount=tax,
             total_amount=total,
             payment_mode=payload.payment_mode,
+            split_details=payload.split_details,
+            shift_id=active_shift_id,
             status="CONFIRMED",
             created_by=user_id,
             items=bill_items

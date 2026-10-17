@@ -14,6 +14,7 @@ import {
   Calendar,
   X,
   RotateCcw,
+  Split,
 } from 'lucide-react';
 
 import { Bill } from '../types';
@@ -264,6 +265,7 @@ export const HistoryPage: React.FC = () => {
               <option value="CASH">Cash</option>
               <option value="CARD">Debit / Card</option>
               <option value="UPI">QRIS / UPI</option>
+              <option value="SPLIT">Split Payment</option>
             </select>
           </div>
 
@@ -456,8 +458,14 @@ export const HistoryPage: React.FC = () => {
                           {bill.payment_mode === 'CASH' && <Banknote className="w-3 h-3 text-forest-700" />}
                           {bill.payment_mode === 'CARD' && <CreditCard className="w-3 h-3 text-sky-600" />}
                           {bill.payment_mode === 'UPI' && <QrCode className="w-3 h-3 text-maroon-700" />}
+                          {bill.payment_mode === 'SPLIT' && <Split className="w-3 h-3 text-amber-700" />}
                           <span>{bill.payment_mode}</span>
                         </span>
+                        {bill.payment_mode === 'SPLIT' && bill.split_details && (
+                          <div className="text-[9.5px] font-mono text-slate-400 mt-0.5">
+                            {Object.entries(bill.split_details).map(([k, v]) => `${k}: ₹${parseFloat(v as any || 0).toFixed(0)}`).join(' | ')}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3.5 px-5 text-center font-mono">{bill.items.length}</td>
                       <td className="py-3.5 px-5 text-right font-extrabold font-display text-slate-900 text-sm">

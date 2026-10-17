@@ -17,12 +17,15 @@ import {
   Cookie,
   Sandwich,
   UtensilsCrossed,
+  Split,
+  Wallet,
 } from 'lucide-react';
-import { Category, Product, Bill } from '../types';
-import { catalogService, billingService, analyticsService } from '../services/cafeServices';
+import { Category, Product, Bill, ShiftCashflowSummary } from '../types';
+import { catalogService, billingService, analyticsService, shiftService } from '../services/cafeServices';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { PrintableReceipt } from '../components/PrintableReceipt';
+import { ShiftModal } from '../components/ShiftModal';
 import { getProductImage } from '../utils/productImages';
 
 interface PosPageProps {
@@ -38,6 +41,13 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [confirmedBill, setConfirmedBill] = useState<Bill | null>(null);
   const [mobileView, setMobileView] = useState<'menu' | 'cart'>('menu');
+
+  // Shift & Cash Tender / Split States
+  const [currentShift, setCurrentShift] = useState<ShiftCashflowSummary | null>(null);
+  const [isShiftModalOpen, setIsShiftModalOpen] = useState<boolean>(false);
+  const [cashReceived, setCashReceived] = useState<string>('');
+  const [splitCash, setSplitCash] = useState<string>('');
+  const [splitUpi, setSplitUpi] = useState<string>('');
 
   const {
     items: cartItems,
@@ -56,6 +66,56 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
   } = useCart();
 
   const { success: showSuccess, error: showError } = useToast();
+
+  // Load active shift status
+  const loadShift = useCallback(async () => {
+    try {
+      const shift = await shiftService.getCurrentShift();
+      setCurrentShift(shift);
+    } catch {
+      // Ignore background shift error
+    }
+  }, []);
+
+  useEffect(() => {
+    loadShift();
+    const handleShiftUpdated = () => loadShift();
+    window.addEventListener('shift-updated', handleShiftUpdated);
+    return () => window.removeEventListener('shift-updated', handleShiftUpdated);
+  }, [loadShift]);
+
+  // Cash Tender & Change Computations
+  const cashReceivedVal = parseFloat(cashReceived) || 0;
+  const changeToReturn = cashReceivedVal >= totalAmount ? +(cashReceivedVal - totalAmount).toFixed(2) : 0;
+  const isCashUnderpaid = cashReceivedVal > 0 && cashReceivedVal < totalAmount;
+
+  const cashPresets = useMemo(() => {
+    if (totalAmount <= 0) return [];
+    const presets = new Set<number>();
+    presets.add(Math.round(totalAmount));
+
+    const next10 = Math.ceil(totalAmount / 10) * 10;
+    if (next10 > totalAmount) presets.add(next10);
+
+    const next50 = Math.ceil(totalAmount / 50) * 50;
+    if (next50 > totalAmount) presets.add(next50);
+
+    const next100 = Math.ceil(totalAmount / 100) * 100;
+    if (next100 > totalAmount) presets.add(next100);
+
+    const next500 = Math.ceil(totalAmount / 500) * 500;
+    if (next500 > totalAmount) presets.add(next500);
+
+    return Array.from(presets).sort((a, b) => a - b).slice(0, 5);
+  }, [totalAmount]);
+
+  // Split Payment Computations
+  const splitCashVal = parseFloat(splitCash) || 0;
+  const splitUpiVal = parseFloat(splitUpi) || 0;
+  const totalSplitEntered = +(splitCashVal + splitUpiVal).toFixed(2);
+  const splitRemainder = Math.max(0, +(totalAmount - totalSplitEntered).toFixed(2));
+  const isSplitValid = Math.abs(totalSplitEntered - totalAmount) < 0.01 && totalAmount > 0;
+  const isSplitOver = totalSplitEntered > totalAmount + 0.01;
 
   const loadCatalog = useCallback(async () => {
     try {
@@ -127,12 +187,30 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
       return;
     }
 
+    if (paymentMode === 'SPLIT') {
+      if (!isSplitValid) {
+        showError(
+          'Split Amount Mismatch',
+          `Split amounts (₹${totalSplitEntered.toFixed(2)}) must equal bill total (₹${totalAmount.toFixed(2)}). Remaining: ₹${splitRemainder.toFixed(2)}`
+        );
+        return;
+      }
+      if (splitCashVal <= 0 && splitUpiVal <= 0) {
+        showError('Invalid Split Amounts', 'Please enter at least one split payment amount');
+        return;
+      }
+    }
+
     try {
       setIsSubmitting(true);
-      const payload = {
+      const payload: any = {
         payment_mode: paymentMode,
         discount_amount: discountAmount,
         tax_amount: taxAmount,
+        split_details: paymentMode === 'SPLIT' ? {
+          CASH: splitCashVal,
+          UPI: splitUpiVal,
+        } : undefined,
         items: cartItems.map((i) => ({
           product_id: i.product.id,
           quantity: i.quantity,
@@ -146,6 +224,11 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
       );
       setConfirmedBill(bill);
       clearCart();
+      setCashReceived('');
+      setSplitCash('');
+      setSplitUpi('');
+      // Trigger live refresh of Shift Register & Today's Cashflow
+      window.dispatchEvent(new Event('shift-updated'));
       // Reload catalog so that stock counts decrement in real-time
       loadCatalog();
     } catch (err: any) {
@@ -204,6 +287,32 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
 
       {/* LEFT CATALOG SECTION (Dual pane on iPad >= 768px) */}
       <div className={`flex-1 h-full overflow-y-auto pr-1 sm:pr-2 space-y-3 sm:space-y-4 md:space-y-4 lg:space-y-6 min-w-0 ${mobileView === 'cart' ? 'hidden md:block' : 'block'}`}>
+        {/* Non-blocking Shift Notice if register is closed */}
+        {(!currentShift || currentShift.status !== 'OPEN') && (
+          <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 flex items-center justify-between gap-3 animate-fade-in shadow-xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="p-2 rounded-xl bg-amber-500 text-white flex-shrink-0">
+                <Wallet className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-extrabold text-xs text-amber-900 leading-tight">
+                  Day Register is Not Open
+                </div>
+                <div className="text-[11px] text-amber-700/80 truncate">
+                  Open shift and enter float to track live drawer cashflow
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsShiftModalOpen(true)}
+              className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all flex-shrink-0 shadow-xs cursor-pointer active:scale-95"
+            >
+              Open Register
+            </button>
+          </div>
+        )}
+
         {/* Categories Row */}
         <div>
             <div className="flex items-center justify-between mb-3">
@@ -600,16 +709,17 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
               </span>
             </div>
 
-            {/* Payment Method Selector Matching Reference */}
+            {/* Payment Method Selector (Cash, UPI, Card, Split) */}
             <div>
               <div className="text-xs font-bold text-slate-900 mb-1.5">Payment Method</div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+                {/* 1. CASH */}
                 <button
                   type="button"
                   onClick={() => setPaymentMode('CASH')}
-                  className={`py-2.5 sm:py-3 px-1.5 rounded-2xl flex flex-col items-center gap-1 text-xs font-bold border transition-all touch-manipulation select-none active:scale-95 ${
+                  className={`py-2 sm:py-2.5 px-1 rounded-2xl flex flex-col items-center gap-1 text-[11px] sm:text-xs font-bold border transition-all touch-manipulation select-none active:scale-95 ${
                     paymentMode === 'CASH'
-                      ? 'border-2 border-maroon-700 bg-maroon-50/50 text-maroon-800 shadow-sm'
+                      ? 'border-2 border-maroon-700 bg-maroon-50/60 text-maroon-800 shadow-sm'
                       : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
@@ -621,29 +731,13 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                   <span>Cash</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setPaymentMode('CARD')}
-                  className={`py-2.5 sm:py-3 px-1.5 rounded-2xl flex flex-col items-center gap-1 text-xs font-bold border transition-all touch-manipulation select-none active:scale-95 ${
-                    paymentMode === 'CARD'
-                      ? 'border-2 border-maroon-700 bg-maroon-50/50 text-maroon-800 shadow-sm'
-                      : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  <CreditCard
-                    className={`w-4 h-4 ${
-                      paymentMode === 'CARD' ? 'text-maroon-700' : 'text-slate-400'
-                    }`}
-                  />
-                  <span>Debit</span>
-                </button>
-
+                {/* 2. UPI */}
                 <button
                   type="button"
                   onClick={() => setPaymentMode('UPI')}
-                  className={`py-2.5 sm:py-3 px-1.5 rounded-2xl flex flex-col items-center gap-1 text-xs font-bold border transition-all touch-manipulation select-none active:scale-95 ${
+                  className={`py-2 sm:py-2.5 px-1 rounded-2xl flex flex-col items-center gap-1 text-[11px] sm:text-xs font-bold border transition-all touch-manipulation select-none active:scale-95 ${
                     paymentMode === 'UPI'
-                      ? 'border-2 border-maroon-700 bg-maroon-50/50 text-maroon-800 shadow-sm'
+                      ? 'border-2 border-maroon-700 bg-maroon-50/60 text-maroon-800 shadow-sm'
                       : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
@@ -652,9 +746,203 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                       paymentMode === 'UPI' ? 'text-maroon-700' : 'text-slate-400'
                     }`}
                   />
-                  <span>QRIS / UPI</span>
+                  <span>UPI</span>
+                </button>
+
+                {/* 3. CARD */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMode('CARD')}
+                  className={`py-2 sm:py-2.5 px-1 rounded-2xl flex flex-col items-center gap-1 text-[11px] sm:text-xs font-bold border transition-all touch-manipulation select-none active:scale-95 ${
+                    paymentMode === 'CARD'
+                      ? 'border-2 border-maroon-700 bg-maroon-50/60 text-maroon-800 shadow-sm'
+                      : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <CreditCard
+                    className={`w-4 h-4 ${
+                      paymentMode === 'CARD' ? 'text-maroon-700' : 'text-slate-400'
+                    }`}
+                  />
+                  <span>Card</span>
+                </button>
+
+                {/* 4. SPLIT */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentMode('SPLIT');
+                    if (!splitCash && !splitUpi && totalAmount > 0) {
+                      setSplitCash('');
+                      setSplitUpi(totalAmount.toFixed(2).replace(/\.00$/, ''));
+                    }
+                  }}
+                  className={`py-2 sm:py-2.5 px-1 rounded-2xl flex flex-col items-center gap-1 text-[11px] sm:text-xs font-bold border transition-all touch-manipulation select-none active:scale-95 ${
+                    paymentMode === 'SPLIT'
+                      ? 'border-2 border-maroon-700 bg-maroon-50/60 text-maroon-800 shadow-sm'
+                      : 'border-slate-200 text-slate-500 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <Split
+                    className={`w-4 h-4 ${
+                      paymentMode === 'SPLIT' ? 'text-maroon-700' : 'text-slate-400'
+                    }`}
+                  />
+                  <span>Split</span>
                 </button>
               </div>
+
+              {/* CASH Tender & Change Due Calculator */}
+              {paymentMode === 'CASH' && totalAmount > 0 && (
+                <div className="mt-2.5 p-2.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-700">Cash Received from Customer</span>
+                    <span className="text-[10px] text-slate-400 font-mono">Bill: ₹{totalAmount.toFixed(2)}</span>
+                  </div>
+
+                  {/* Cash Received Input */}
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₹</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={cashReceived}
+                      onChange={(e) => setCashReceived(e.target.value)}
+                      placeholder={totalAmount.toFixed(2)}
+                      className="w-full pl-7 pr-3 py-1.5 bg-white border border-slate-200 focus:border-maroon-700 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none shadow-xs"
+                    />
+                  </div>
+
+                  {/* Quick Preset Pills */}
+                  <div className="flex flex-wrap gap-1">
+                    {cashPresets.map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setCashReceived(String(preset))}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-mono font-bold transition-all border ${
+                          cashReceived === String(preset)
+                            ? 'bg-maroon-700 text-white border-maroon-700 shadow-xs'
+                            : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+                        }`}
+                      >
+                        {preset === Math.round(totalAmount) ? `Exact (₹${preset})` : `₹${preset}`}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Change Due Live Display */}
+                  {cashReceivedVal >= totalAmount && (
+                    <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200/90 flex items-center justify-between animate-fade-in shadow-xs">
+                      <div>
+                        <div className="text-[9.5px] uppercase tracking-wider font-extrabold text-emerald-700 leading-none">
+                          Change to Return
+                        </div>
+                        <div className="text-lg font-black text-emerald-800 font-mono mt-0.5">
+                          ₹{changeToReturn.toFixed(2)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[9.5px] text-emerald-600 font-medium">Cash Given</div>
+                        <div className="text-xs font-bold text-emerald-950 font-mono">₹{cashReceivedVal.toFixed(2)}</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {isCashUnderpaid && (
+                    <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold flex justify-between items-center animate-fade-in">
+                      <span>Short by ₹{(totalAmount - cashReceivedVal).toFixed(2)}</span>
+                      <span className="font-normal text-amber-600">Needs ₹{totalAmount.toFixed(2)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* SPLIT Payment Auto-Balancing Form */}
+              {paymentMode === 'SPLIT' && totalAmount > 0 && (
+                <div className="mt-2.5 p-2.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1">
+                      <Split className="w-3.5 h-3.5 text-maroon-700" />
+                      Split Payment Breakdown
+                    </span>
+                    <span
+                      className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
+                        isSplitValid
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          : isSplitOver
+                          ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                          : 'bg-amber-100 text-amber-800 border border-amber-200'
+                      }`}
+                    >
+                      {isSplitValid
+                        ? '✓ Balanced'
+                        : isSplitOver
+                        ? `Over: ₹${(totalSplitEntered - totalAmount).toFixed(2)}`
+                        : `Left: ₹${splitRemainder.toFixed(2)}`}
+                    </span>
+                  </div>
+
+                  {/* Cash Row */}
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 text-[11px] font-bold text-slate-600 w-14">
+                      <Banknote className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Cash</span>
+                    </div>
+                    <div className="relative flex-1">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={splitCash}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setSplitCash(val);
+                          const c = parseFloat(val) || 0;
+                          if (c <= totalAmount) {
+                            setSplitUpi((totalAmount - c).toFixed(2).replace(/\.00$/, ''));
+                          }
+                        }}
+                        placeholder="0.00"
+                        className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 focus:border-maroon-700 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none shadow-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {/* UPI Row */}
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1 text-[11px] font-bold text-slate-600 w-14">
+                      <QrCode className="w-3.5 h-3.5 text-slate-400" />
+                      <span>UPI</span>
+                    </div>
+                    <div className="relative flex-1">
+                      <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={splitUpi}
+                        onChange={(e) => setSplitUpi(e.target.value)}
+                        placeholder="0.00"
+                        className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 focus:border-maroon-700 rounded-xl text-xs font-mono font-bold text-slate-900 focus:outline-none shadow-xs"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const rem = Math.max(0, +(totalAmount - (parseFloat(splitCash) || 0)).toFixed(2));
+                        setSplitUpi(String(rem));
+                      }}
+                      className="px-2 py-1.5 bg-maroon-50 hover:bg-maroon-100 text-maroon-800 border border-maroon-200 rounded-xl text-[10px] font-bold transition-all whitespace-nowrap active:scale-95"
+                      title="Auto-fill remainder"
+                    >
+                      Fill Left
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Dynamic QR Code for UPI */}
               {paymentMode === 'UPI' && totalAmount > 0 && (
@@ -692,6 +980,13 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
           onClose={() => setConfirmedBill(null)}
         />
       )}
+
+      {/* Shift Register Management Modal */}
+      <ShiftModal
+        isOpen={isShiftModalOpen}
+        onClose={() => setIsShiftModalOpen(false)}
+        onShiftChange={(s) => setCurrentShift(s)}
+      />
     </div>
   );
 };

@@ -66,7 +66,9 @@ export interface Bill {
   discount_amount: string;
   tax_amount: string;
   total_amount: string;
-  payment_mode: 'CASH' | 'CARD' | 'UPI';
+  payment_mode: 'CASH' | 'CARD' | 'UPI' | 'SPLIT';
+  split_details?: { cash?: number | string; upi?: number | string; card?: number | string } | null;
+  shift_id?: number | null;
   status: 'CONFIRMED' | 'VOID';
   void_reason?: string;
   voided_at?: string;
@@ -101,7 +103,9 @@ export interface Expense {
   category: string;
   description: string;
   amount: string;
+  payment_mode?: 'CASH' | 'UPI' | 'CARD' | 'BANK_TRANSFER';
   expense_date: string;
+  shift_id?: number | null;
   created_by: number;
   creator_name?: string;
   created_at: string;
@@ -202,4 +206,36 @@ export interface SlowMoverItem {
   total_qty: number;
   total_revenue: string;
   days_window: number;
+}
+
+// Shift & Daily Cashflow Types
+export interface ShiftCashflowSummary {
+  shift_id: number;
+  status: 'OPEN' | 'CLOSED';
+  opened_at: string;
+  closed_at?: string | null;
+  opened_by_id: number;
+  opened_by_name: string;
+  opening_cash: string;
+  cash_sales: string;
+  upi_sales: string;
+  card_sales: string;
+  total_sales: string;
+  cash_expenses: string;
+  expected_cash: string;
+  closing_cash_actual?: string | null;
+  closing_difference?: string | null;
+  closing_notes?: string | null;
+  confirmed_bills_count: number;
+  void_bills_count: number;
+}
+
+export interface ShiftOpenRequest {
+  opening_cash: number;
+  opening_notes?: string;
+}
+
+export interface ShiftCloseRequest {
+  closing_cash_actual: number;
+  closing_notes?: string;
 }

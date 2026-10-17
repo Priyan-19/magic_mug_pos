@@ -8,8 +8,8 @@ interface CartContextType {
   updateQuantity: (productId: number, delta: number) => void;
   setItemQuantity: (productId: number, qty: number) => void;
   clearCart: () => void;
-  paymentMode: 'CASH' | 'CARD' | 'UPI';
-  setPaymentMode: (mode: 'CASH' | 'CARD' | 'UPI') => void;
+  paymentMode: 'CASH' | 'CARD' | 'UPI' | 'SPLIT';
+  setPaymentMode: (mode: 'CASH' | 'CARD' | 'UPI' | 'SPLIT') => void;
   discountAmount: string;
   setDiscountAmount: (val: string) => void;
   taxAmount: string;
@@ -23,7 +23,7 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
-  const [paymentMode, setPaymentMode] = useState<'CASH' | 'CARD' | 'UPI'>('CASH');
+  const [paymentMode, setPaymentMode] = useState<'CASH' | 'CARD' | 'UPI' | 'SPLIT'>('CASH');
   const [discountAmount, setDiscountAmount] = useState<string>('0.00');
   const [taxAmount, setTaxAmount] = useState<string>('0.00');
 

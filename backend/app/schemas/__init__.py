@@ -19,6 +19,12 @@ from app.schemas.analytics import (
     BestSellerItem,
     SlowMoverItem
 )
+from app.schemas.shift import (
+    ShiftOpenRequest,
+    ShiftCloseRequest,
+    ShiftCashflowSummary,
+    ShiftResponse
+)
 
 __all__ = [
     "StandardErrorResponse",
