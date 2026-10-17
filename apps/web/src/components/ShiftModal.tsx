@@ -161,8 +161,8 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                   Daily Register & Cashflow
                 </h3>
                 {currentShift?.status === 'OPEN' ? (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-forest-50 text-forest-700 border border-forest-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-forest-600 animate-pulse" />
                     Register Open
                   </span>
                 ) : (
@@ -350,99 +350,129 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
               {/* TAB 1: TODAY'S LIVE CASHFLOW */}
               {activeTab === 'cashflow' && (
                 <div className="space-y-4">
-                  {/* Hero Expected Cash Card */}
-                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-xl relative overflow-hidden">
+                  {/* Hero Expected Cash Card (Magic Mug Brand Maroon) */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-maroon-800 via-maroon-900 to-maroon-950 text-white shadow-card relative overflow-hidden">
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                        <Wallet className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-maroon-200 flex items-center gap-1.5">
+                        <Wallet className="w-4 h-4 text-maroon-300" />
                         Expected Cash in Drawer Right Now
                       </span>
                       <button
                         onClick={loadCurrentShift}
                         title="Refresh Cashflow"
-                        className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+                        className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-white transition-colors"
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <div className="text-2xl sm:text-3xl font-mono font-black text-emerald-400 tracking-tight">
+                    <div className="text-2xl sm:text-3xl font-mono font-black text-white tracking-tight">
                       ₹{parseFloat(currentShift.expected_cash).toFixed(2)}
                     </div>
-                    <p className="text-[11px] text-slate-400 mt-1 font-medium">
+                    <p className="text-[11px] text-maroon-200/80 mt-1 font-medium">
                       Formula: Opening Float (₹{parseFloat(currentShift.opening_cash).toFixed(2)}) + Cash
                       Sales (+₹{parseFloat(currentShift.cash_sales).toFixed(2)}) - Cash Expenses (-₹
                       {parseFloat(currentShift.cash_expenses).toFixed(2)})
                     </p>
                   </div>
 
-                  {/* Cashflow Breakdown Grid */}
+                  {/* Cashflow Breakdown Grid (Consistent Palette: White cards + Brand Badges) */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
-                    <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80">
-                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 mb-0.5 flex items-center gap-1">
-                        <ArrowUpRight className="w-3 h-3 text-emerald-600" />
-                        Opening Float
+                    {/* 1. Opening Float */}
+                    <div className="p-3 sm:p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                          Opening Float
+                        </span>
+                        <div className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                          <ArrowUpRight className="w-3.5 h-3.5" />
+                        </div>
                       </div>
-                      <div className="text-base font-mono font-black text-slate-900">
+                      <div className="text-base sm:text-lg font-mono font-black text-slate-900">
                         ₹{parseFloat(currentShift.opening_cash).toFixed(2)}
                       </div>
                       <div className="text-[10px] text-slate-400 mt-0.5">Starting drawer cash</div>
                     </div>
 
-                    <div className="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-200/70">
-                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700 mb-0.5 flex items-center gap-1">
-                        <DollarSign className="w-3 h-3 text-emerald-700" />
-                        Cash Collected
+                    {/* 2. Cash Collected (Brand Forest) */}
+                    <div className="p-3 sm:p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-forest-700">
+                          Cash Collected
+                        </span>
+                        <div className="w-6 h-6 rounded-lg bg-forest-50 text-forest-700 flex items-center justify-center">
+                          <DollarSign className="w-3.5 h-3.5" />
+                        </div>
                       </div>
-                      <div className="text-base font-mono font-black text-emerald-900">
+                      <div className="text-base sm:text-lg font-mono font-black text-forest-700">
                         ₹{parseFloat(currentShift.cash_sales).toFixed(2)}
                       </div>
-                      <div className="text-[10px] text-emerald-700/80 mt-0.5">
-                        from cash & split sales
+                      <div className="text-[10px] text-slate-400 mt-0.5">
+                        Cash & split sales
                       </div>
                     </div>
 
-                    <div className="p-3 rounded-2xl bg-indigo-50/60 border border-indigo-200/70">
-                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-700 mb-0.5 flex items-center gap-1">
-                        <Smartphone className="w-3 h-3 text-indigo-700" />
-                        UPI Digital Sales
+                    {/* 3. UPI Digital Sales (Brand Maroon Badge) */}
+                    <div className="p-3 sm:p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700">
+                          UPI Digital Sales
+                        </span>
+                        <div className="w-6 h-6 rounded-lg bg-maroon-50 text-maroon-700 flex items-center justify-center">
+                          <Smartphone className="w-3.5 h-3.5" />
+                        </div>
                       </div>
-                      <div className="text-base font-mono font-black text-indigo-900">
+                      <div className="text-base sm:text-lg font-mono font-black text-slate-900">
                         ₹{parseFloat(currentShift.upi_sales).toFixed(2)}
                       </div>
-                      <div className="text-[10px] text-indigo-700/80 mt-0.5">Direct to bank account</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Direct to bank account</div>
                     </div>
 
-                    <div className="p-3 rounded-2xl bg-purple-50/60 border border-purple-200/70">
-                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-purple-700 mb-0.5 flex items-center gap-1">
-                        <CreditCard className="w-3 h-3 text-purple-700" />
-                        Card Machine
+                    {/* 4. Card Machine */}
+                    <div className="p-3 sm:p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-700">
+                          Card Machine
+                        </span>
+                        <div className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                          <CreditCard className="w-3.5 h-3.5" />
+                        </div>
                       </div>
-                      <div className="text-base font-mono font-black text-purple-900">
+                      <div className="text-base sm:text-lg font-mono font-black text-slate-900">
                         ₹{parseFloat(currentShift.card_sales).toFixed(2)}
                       </div>
-                      <div className="text-[10px] text-purple-700/80 mt-0.5">POS terminal settlement</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Terminal settlement</div>
                     </div>
 
-                    <div className="p-3 rounded-2xl bg-rose-50/60 border border-rose-200/70">
-                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700 mb-0.5 flex items-center gap-1">
-                        <ArrowDownRight className="w-3 h-3 text-rose-700" />
-                        Cash Expenses Paid
+                    {/* 5. Cash Expenses Paid */}
+                    <div className="p-3 sm:p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-rose-600">
+                          Cash Expenses
+                        </span>
+                        <div className="w-6 h-6 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                          <ArrowDownRight className="w-3.5 h-3.5" />
+                        </div>
                       </div>
-                      <div className="text-base font-mono font-black text-rose-900">
+                      <div className="text-base sm:text-lg font-mono font-black text-rose-600">
                         -₹{parseFloat(currentShift.cash_expenses).toFixed(2)}
                       </div>
-                      <div className="text-[10px] text-rose-700/80 mt-0.5">Paid out of drawer</div>
+                      <div className="text-[10px] text-slate-400 mt-0.5">Paid out of drawer</div>
                     </div>
 
-                    <div className="p-3 rounded-2xl bg-maroon-50/60 border border-maroon-200/70">
-                      <div className="text-[10px] font-extrabold uppercase tracking-wider text-maroon-700 mb-0.5 flex items-center gap-1">
-                        <Receipt className="w-3 h-3 text-maroon-700" />
-                        Total Shift Sales
+                    {/* 6. Total Shift Sales (Brand Maroon) */}
+                    <div className="p-3 sm:p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-maroon-700">
+                          Total Shift Sales
+                        </span>
+                        <div className="w-6 h-6 rounded-lg bg-maroon-50 text-maroon-700 flex items-center justify-center">
+                          <Receipt className="w-3.5 h-3.5" />
+                        </div>
                       </div>
-                      <div className="text-base font-mono font-black text-maroon-900">
+                      <div className="text-base sm:text-lg font-mono font-black text-maroon-800">
                         ₹{parseFloat(currentShift.total_sales).toFixed(2)}
                       </div>
-                      <div className="text-[10px] text-maroon-700/80 mt-0.5">
+                      <div className="text-[10px] text-slate-400 mt-0.5">
                         {currentShift.confirmed_bills_count} bills ({currentShift.void_bills_count} void)
                       </div>
                     </div>
@@ -522,15 +552,15 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                     <div
                       className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs font-bold transition-all ${
                         Math.abs(difference) < 0.01
-                          ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                          ? 'bg-forest-50 border-forest-200 text-forest-800'
                           : difference < 0
                           ? 'bg-rose-50 border-rose-200 text-rose-800'
-                          : 'bg-blue-50 border-blue-200 text-blue-800'
+                          : 'bg-forest-50 border-forest-200 text-forest-800'
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         {Math.abs(difference) < 0.01 ? (
-                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <CheckCircle2 className="w-4 h-4 text-forest-700 shrink-0" />
                         ) : (
                           <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                         )}

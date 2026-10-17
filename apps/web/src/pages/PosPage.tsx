@@ -834,18 +834,18 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
 
                   {/* Change Due Live Display */}
                   {cashReceivedVal >= totalAmount && (
-                    <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200/90 flex items-center justify-between animate-fade-in shadow-xs">
+                    <div className="p-2 rounded-xl bg-forest-50 border border-forest-200/90 flex items-center justify-between animate-fade-in shadow-xs">
                       <div>
-                        <div className="text-[9.5px] uppercase tracking-wider font-extrabold text-emerald-700 leading-none">
+                        <div className="text-[9.5px] uppercase tracking-wider font-extrabold text-forest-700 leading-none">
                           Change to Return
                         </div>
-                        <div className="text-lg font-black text-emerald-800 font-mono mt-0.5">
+                        <div className="text-lg font-black text-forest-800 font-mono mt-0.5">
                           ₹{changeToReturn.toFixed(2)}
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-[9.5px] text-emerald-600 font-medium">Cash Given</div>
-                        <div className="text-xs font-bold text-emerald-950 font-mono">₹{cashReceivedVal.toFixed(2)}</div>
+                        <div className="text-[9.5px] text-forest-600 font-medium">Cash Given</div>
+                        <div className="text-xs font-bold text-forest-950 font-mono">₹{cashReceivedVal.toFixed(2)}</div>
                       </div>
                     </div>
                   )}
@@ -870,7 +870,7 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                     <span
                       className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-md ${
                         isSplitValid
-                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                          ? 'bg-forest-50 text-forest-700 border border-forest-200'
                           : isSplitOver
                           ? 'bg-rose-100 text-rose-800 border border-rose-200'
                           : 'bg-amber-100 text-amber-800 border border-amber-200'
