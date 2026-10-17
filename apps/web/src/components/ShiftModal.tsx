@@ -13,7 +13,6 @@ import {
   User as UserIcon,
   RotateCcw,
   Receipt,
-  FileSpreadsheet,
   ArrowDownRight,
   ArrowUpRight,
   ShieldCheck,
@@ -34,10 +33,9 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
   onClose,
   onShiftChange,
 }) => {
-  const [activeTab, setActiveTab] = useState<'cashflow' | 'close' | 'history'>('cashflow');
+  const [activeTab, setActiveTab] = useState<'cashflow' | 'close'>('cashflow');
   const [currentShift, setCurrentShift] = useState<ShiftCashflowSummary | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [historyShifts, setHistoryShifts] = useState<ShiftCashflowSummary[]>([]);
 
   // Open Shift Form State
   const [openingCash, setOpeningCash] = useState<string>('1000');
@@ -65,19 +63,9 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
     }
   };
 
-  const loadHistory = async () => {
-    try {
-      const res = await shiftService.getHistory(10);
-      setHistoryShifts(res);
-    } catch (err: any) {
-      console.error('Failed to load shift history:', err);
-    }
-  };
-
   useEffect(() => {
     if (isOpen) {
       loadCurrentShift();
-      loadHistory();
     }
   }, [isOpen]);
 
@@ -131,8 +119,8 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
         'Register Closed',
         `Shift closed. Expected: ₹${res.expected_cash}, Counted: ₹${actual.toFixed(2)}`
       );
-      loadHistory();
-      setActiveTab('history');
+      setActiveTab('cashflow');
+      onClose();
     } catch (err: any) {
       showError('Close Failed', err.message || 'Could not close register');
     } finally {
@@ -189,36 +177,23 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
           <div className="flex items-center border-b border-slate-100 bg-white px-5 pt-2 gap-2 flex-shrink-0">
             <button
               onClick={() => setActiveTab('cashflow')}
-              className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${
-                activeTab === 'cashflow'
+              className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'cashflow'
                   ? 'border-maroon-700 text-maroon-900'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+                }`}
             >
               <TrendingUp className="w-3.5 h-3.5" />
               <span>Today's Cashflow</span>
             </button>
             <button
               onClick={() => setActiveTab('close')}
-              className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${
-                activeTab === 'close'
+              className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'close'
                   ? 'border-maroon-700 text-maroon-900'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+                }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Close Day (EOD)</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('history')}
-              className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${
-                activeTab === 'history'
-                  ? 'border-maroon-700 text-maroon-900'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" />
-              <span>Past Shifts</span>
             </button>
           </div>
         )}
@@ -276,11 +251,10 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                         key={preset}
                         type="button"
                         onClick={() => setOpeningCash(preset.toString())}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
-                          openingCash === preset.toString()
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${openingCash === preset.toString()
                             ? 'bg-maroon-700 text-white shadow-xs'
                             : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                        }`}
+                          }`}
                       >
                         ₹{preset}
                       </button>
@@ -319,30 +293,6 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                   </button>
                 </div>
               </form>
-
-              {historyShifts.length > 0 && (
-                <div className="pt-4 border-t border-slate-100">
-                  <div className="text-xs font-bold text-slate-700 mb-2">Previous Shifts Summary</div>
-                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
-                    {historyShifts.slice(0, 3).map((s) => (
-                      <div
-                        key={s.shift_id}
-                        className="flex items-center justify-between p-2 rounded-xl bg-slate-50 border border-slate-100 text-xs"
-                      >
-                        <div>
-                          <span className="font-bold text-slate-800">
-                            Shift #{s.shift_id} ({new Date(s.opened_at).toLocaleDateString()})
-                          </span>
-                          <span className="text-[10px] text-slate-400 ml-2">by {s.opened_by_name}</span>
-                        </div>
-                        <div className="font-mono font-bold text-slate-700">
-                          Total Sales: ₹{parseFloat(s.total_sales).toFixed(2)}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           ) : (
             <>
@@ -458,11 +408,11 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                       <div className="text-[10px] text-slate-400 mt-0.5">Paid out of drawer</div>
                     </div>
 
-                    {/* 6. Total Shift Sales (Brand Maroon) */}
+                    {/* 6. Total Sales (Brand Maroon) */}
                     <div className="p-3 sm:p-3.5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[10px] font-extrabold uppercase tracking-wider text-maroon-700">
-                          Total Shift Sales
+                          Total Sales
                         </span>
                         <div className="w-6 h-6 rounded-lg bg-maroon-50 text-maroon-700 flex items-center justify-center">
                           <Receipt className="w-3.5 h-3.5" />
@@ -549,13 +499,12 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                   {/* Discrepancy Live Feedback */}
                   {closingActual !== '' && !isNaN(actualAmount) && (
                     <div
-                      className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs font-bold transition-all ${
-                        Math.abs(difference) < 0.01
+                      className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs font-bold transition-all ${Math.abs(difference) < 0.01
                           ? 'bg-forest-50 border-forest-200 text-forest-800'
                           : difference < 0
-                          ? 'bg-rose-50 border-rose-200 text-rose-800'
-                          : 'bg-forest-50 border-forest-200 text-forest-800'
-                      }`}
+                            ? 'bg-rose-50 border-rose-200 text-rose-800'
+                            : 'bg-forest-50 border-forest-200 text-forest-800'
+                        }`}
                     >
                       <div className="flex items-center gap-2">
                         {Math.abs(difference) < 0.01 ? (
@@ -567,8 +516,8 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                           {Math.abs(difference) < 0.01
                             ? 'Balanced: Physical cash matches expected cashflow perfectly!'
                             : difference < 0
-                            ? `Cash Shortage: ₹${Math.abs(difference).toFixed(2)} missing from drawer`
-                            : `Cash Surplus: ₹${difference.toFixed(2)} excess cash in drawer`}
+                              ? `Cash Shortage: ₹${Math.abs(difference).toFixed(2)} missing from drawer`
+                              : `Cash Surplus: ₹${difference.toFixed(2)} excess cash in drawer`}
                         </span>
                       </div>
                       <span className="font-mono text-sm font-black">
@@ -608,57 +557,6 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                     </button>
                   </div>
                 </form>
-              )}
-
-              {/* TAB 3: SHIFT HISTORY */}
-              {activeTab === 'history' && (
-                <div className="space-y-3">
-                  <div className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                    Recent Closed Shifts & EOD Reconciliations
-                  </div>
-                  {historyShifts.length === 0 ? (
-                    <div className="py-8 text-center text-xs text-slate-400">
-                      No closed shift records found.
-                    </div>
-                  ) : (
-                    <div className="space-y-2 max-h-72 overflow-y-auto">
-                      {historyShifts.map((s) => (
-                        <div
-                          key={s.shift_id}
-                          className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs space-y-1.5"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-extrabold text-slate-900">
-                              Shift #{s.shift_id} • {new Date(s.opened_at).toLocaleDateString()}
-                            </span>
-                            <span
-                              className={`px-2 py-0.5 rounded-md font-mono text-[10px] font-bold ${
-                                s.closing_difference && Math.abs(parseFloat(s.closing_difference)) < 0.01
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : parseFloat(s.closing_difference || '0') < 0
-                                  ? 'bg-rose-100 text-rose-800'
-                                  : 'bg-blue-100 text-blue-800'
-                              }`}
-                            >
-                              Diff: ₹{parseFloat(s.closing_difference || '0').toFixed(2)}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-slate-600 font-mono">
-                            <div>Float: ₹{parseFloat(s.opening_cash).toFixed(2)}</div>
-                            <div>Cash: ₹{parseFloat(s.cash_sales).toFixed(2)}</div>
-                            <div>Expected: ₹{parseFloat(s.expected_cash).toFixed(2)}</div>
-                            <div>Actual: ₹{parseFloat(s.closing_cash_actual || '0').toFixed(2)}</div>
-                          </div>
-                          {s.closing_notes && (
-                            <div className="text-[10px] text-slate-500 italic mt-1">
-                              Note: {s.closing_notes}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
               )}
             </>
           )}
