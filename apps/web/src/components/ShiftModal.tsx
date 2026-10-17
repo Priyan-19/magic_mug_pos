@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   DollarSign,
@@ -143,11 +144,13 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
   const actualAmount = parseFloat(closingActual || '0');
   const difference = !isNaN(actualAmount) ? actualAmount - expectedAmount : 0;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white border border-slate-200/90 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+  if (!isOpen) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
+      <div className="bg-white border border-slate-200/90 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] my-auto">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-white flex-shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-maroon-50 border border-maroon-100 flex items-center justify-center text-maroon-700 shadow-xs">
               <Wallet className="w-5 h-5" />
@@ -184,7 +187,7 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
 
         {/* Tab Navigation (Only shown when shift is open or history available) */}
         {currentShift?.status === 'OPEN' && (
-          <div className="flex items-center border-b border-slate-100 bg-white px-5 pt-2 gap-2">
+          <div className="flex items-center border-b border-slate-100 bg-white px-5 pt-2 gap-2 flex-shrink-0">
             <button
               onClick={() => setActiveTab('cashflow')}
               className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${
@@ -222,7 +225,7 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
         )}
 
         {/* Content Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
+        <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 space-y-4">
           {/* CASE 1: NO SHIFT OPEN -> SHOW DAY OPENING PROMPT */}
           {!currentShift || currentShift.status !== 'OPEN' ? (
             <div className="space-y-4">
@@ -632,6 +635,7 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
