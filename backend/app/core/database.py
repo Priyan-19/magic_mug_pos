@@ -57,6 +57,14 @@ async def init_db() -> None:
                 await conn.execute(text("ALTER TABLE bill_items ALTER COLUMN product_id DROP NOT NULL;"))
                 await conn.execute(text("ALTER TABLE bill_items DROP CONSTRAINT IF EXISTS bill_items_product_id_fkey;"))
                 await conn.execute(text("ALTER TABLE bill_items ADD CONSTRAINT bill_items_product_id_fkey FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE SET NULL;"))
+                await conn.execute(text("ALTER TABLE bills ADD COLUMN IF NOT EXISTS shift_id BIGINT REFERENCES shifts(id) ON DELETE SET NULL;"))
+                await conn.execute(text("ALTER TABLE bills ADD COLUMN IF NOT EXISTS split_details JSONB NULL;"))
+                await conn.execute(text("ALTER TABLE bills ADD COLUMN IF NOT EXISTS cash_tendered NUMERIC(12, 2) NULL;"))
+                await conn.execute(text("ALTER TABLE bills ADD COLUMN IF NOT EXISTS change_given NUMERIC(12, 2) NULL;"))
+                await conn.execute(text("ALTER TABLE expenses ADD COLUMN IF NOT EXISTS shift_id BIGINT REFERENCES shifts(id) ON DELETE SET NULL;"))
+                await conn.execute(text("ALTER TABLE expenses ADD COLUMN IF NOT EXISTS payment_mode VARCHAR(20) DEFAULT 'CASH';"))
+                await conn.execute(text("ALTER TABLE bills DROP CONSTRAINT IF EXISTS check_bill_payment_mode;"))
+                await conn.execute(text("ALTER TABLE bills ADD CONSTRAINT check_bill_payment_mode CHECK (payment_mode IN ('CASH', 'CARD', 'UPI', 'SPLIT'));"))
             except Exception as e:
                 print(f"[init_db] Column/FK migration check: {e}")
 
