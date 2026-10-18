@@ -7,12 +7,14 @@
 
 ## 🌟 Key Features
 
-- **⚡ Fast POS Terminal**: Intuitive interface for ringing up orders with instant calculations, discounts, taxes, and multi-mode payments (Cash, Card, UPI).
+- **⚡ Fast POS Terminal**: Intuitive interface for ringing up orders with instant calculations, discounts, taxes, and multi-mode payments (Cash, Card, UPI, Split).
 - **🖨️ Thermal Receipt Printing & Sharing**: Generate visual receipts, print to Bluetooth/USB thermal printers, or export and share receipts instantly.
 - **📱 True Cross-Platform**: Web administration dashboard + native mobile application for Android and iOS.
 - **📁 Dynamic Menu & Category Management**: Add dishes, toggle item availability in real-time, and create custom menu categories directly from mobile or web.
 - **📊 Real-Time Analytics & Reports**: Live tracking of revenue, daily/weekly/monthly trends, profit margins, and best-selling menu items.
 - **💸 Expense Ledger**: Track day-to-day cafe expenses categorized by inventory, dairy, packaging, utilities, etc.
+- **🏪 Daily Register & Cash Drawer Management**: Open/close daily shift registers with opening float, live physical cash tally, and end-of-day reconciliation with variance tracking.
+- **💰 Cash Tender & Change Calculator**: Tracks exact cash tendered by customers and change returned, providing accurate physical drawer balance at all times.
 - **🌐 Seamless Local Networking**: Connect mobile devices directly to the in-cafe server over local Wi-Fi with automatic fallback and connection tester.
 - **🐳 1-Command Docker Deployment**: Fully containerized multi-service architecture ready for production.
 
@@ -53,7 +55,7 @@
 | Layer | Technologies |
 | :--- | :--- |
 | **Backend API** | Python 3.12, FastAPI, SQLAlchemy 2.0 (Async), Pydantic v2, Uvicorn |
-| **Database** | PostgreSQL 15 (Docker) / SQLite (Fallback for lightweight dev) |
+| **Database** | PostgreSQL 15 (Docker / Supabase) / SQLite (Fallback for lightweight dev) |
 | **Web Dashboard** | React 19, TypeScript, Vite, TailwindCSS, Lucide Icons, html2canvas |
 | **Mobile App** | Flutter (Dart), Provider, Dio, FL Chart, Screenshot, Share Plus (iOS 13+ / Android 21+) |
 | **Containerization** | Docker, Docker Compose, Nginx Alpine |
@@ -132,6 +134,29 @@ flutter run
 
 ---
 
+## 🏪 Daily Register & Cash Drawer System
+
+The POS enforces a mandatory daily register workflow to ensure accurate cash accountability:
+
+### How It Works
+1. **Open Register**: At the start of each day/shift, the cashier opens the register by entering the **Opening Cash Float** (physical cash in the drawer for making change).
+2. **Billing Enforced**: No bills can be placed until the daily register is opened. The system blocks checkout and prompts the cashier to open the register first.
+3. **Live Cash Tally**: Throughout the day, the system tracks:
+   - **Cash Received from Customers** (gross amount tendered)
+   - **Change Returned** (chillarai given back)
+   - **Net Cash Sales** (received minus change)
+   - **Shop Expenses** (paid from cash drawer)
+   - **Expected Physical Cash in Drawer** = Opening Float + Net Cash Sales - Cash Expenses
+4. **Close Register (EOD)**: At end of day, the cashier counts physical cash and enters the actual amount. The system computes the **variance** (surplus or shortage) for reconciliation.
+
+### Cash Drawer Formula
+```
+Expected Cash = Opening Float + Cash Received (Gross) - Change Returned - Cash Expenses
+Variance = Actual Closing Cash - Expected Cash
+```
+
+---
+
 ## 🌐 Cloud Backend Deployment & Mobile Sync Guide
 
 Instead of being restricted to a local Wi-Fi network, hosting your backend on a cloud platform (Render, Railway, AWS, DigitalOcean, or any VPS) allows the mobile app and web dashboard to work **from anywhere over 4G/5G mobile data or any Wi-Fi connection**.
@@ -186,18 +211,19 @@ MAGIC MUG/
 │   │
 │   └── web/                     # React 19 Web Management Dashboard
 │       ├── src/
-│       │   ├── components/      # UI components & Printable receipt
+│       │   ├── components/      # UI components, ShiftModal, PrintableReceipt
 │       │   ├── pages/           # POS, Orders, Analytics, Catalog, Expenses
 │       │   ├── services/        # Typed API service integrations
-│       │   └── context/         # Auth, Toast, Cart contexts
+│       │   ├── context/         # Auth, Toast, Cart contexts
+│       │   └── types/           # TypeScript data interfaces & DTOs
 │       ├── Dockerfile           # Web multi-stage build container
 │       └── nginx.conf           # SPA routing & API reverse proxy
 │
 ├── backend/                     # FastAPI Backend Server
 │   ├── app/
-│   │   ├── api/v1/              # Endpoints (auth, bills, products, analytics)
+│   │   ├── api/v1/              # Endpoints (auth, bills, products, shifts, analytics)
 │   │   ├── core/                # Config, database engine, security
-│   │   ├── models/              # SQLAlchemy database entities
+│   │   ├── models/              # SQLAlchemy database entities (incl. Shift)
 │   │   ├── schemas/             # Pydantic request/response validation schemas
 │   │   └── services/            # Business logic, audit logging
 │   ├── Dockerfile               # Production Python container
@@ -237,6 +263,7 @@ MAGIC MUG/
 - **Zero Hardcoded Secrets in Git**: Sensitive credentials are kept in `.env` files and excluded via `.gitignore`.
 - **Prepared Statements**: All database operations use SQLAlchemy async ORM with parameterized queries to prevent SQL injections.
 - **Audit Logging**: Every sensitive action (bill voids, product creations, expense additions) is automatically recorded in the `audit_logs` table.
+- **Register Enforcement**: No bills can be processed without an active open shift/register, preventing untracked cash transactions.
 - **Safe Network Isolation**: Database ports can be unexposed in production by removing host port bindings in `docker-compose.yml` if external access is not required.
 
 ---

@@ -9,6 +9,7 @@
 *.env
 !.env.example
 !backend/.env.example
+!apps/web/.env.example
 
 # ==========================================
 # Node.js / Web Frontend (React + Vite)
@@ -49,6 +50,13 @@ coverage.xml
 .mypy_cache/
 .pytype/
 .ruff_cache/
+
+# ==========================================
+# Test, Seed & Local Development Files
+# ==========================================
+backend/tests/
+backend/pytest.ini
+backend/app/seed.py
 
 # ==========================================
 # Flutter & Mobile (Android & iOS)
@@ -129,4 +137,8 @@ logs/
 .temp/
 tmp/
 studio_run.log
+
+# ==========================================
+# Agents & AI Tooling (Local Only)
+# ==========================================
 .agents/

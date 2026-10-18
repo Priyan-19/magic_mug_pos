@@ -13,6 +13,7 @@ import {
   User as UserIcon,
   RotateCcw,
   Receipt,
+  Coins,
   ArrowDownRight,
   ArrowUpRight,
   ShieldCheck,
@@ -136,7 +137,7 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-black/60 backdrop-blur-xs animate-fade-in overflow-y-auto">
-      <div className="bg-white border border-slate-200/90 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[88vh] my-auto">
+      <div className="bg-white border border-slate-200/90 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] my-auto">
         {/* Header */}
         <div className="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between bg-white flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -178,8 +179,8 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
             <button
               onClick={() => setActiveTab('cashflow')}
               className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'cashflow'
-                  ? 'border-maroon-700 text-maroon-900'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-maroon-700 text-maroon-900'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
             >
               <TrendingUp className="w-3.5 h-3.5" />
@@ -188,8 +189,8 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
             <button
               onClick={() => setActiveTab('close')}
               className={`pb-2.5 px-3 text-xs font-bold border-b-2 transition-all flex items-center gap-1.5 ${activeTab === 'close'
-                  ? 'border-maroon-700 text-maroon-900'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
+                ? 'border-maroon-700 text-maroon-900'
+                : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -203,16 +204,16 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
           {/* CASE 1: NO SHIFT OPEN -> SHOW DAY OPENING PROMPT */}
           {!currentShift || currentShift.status !== 'OPEN' ? (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200/70">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-maroon-50 via-white to-slate-50 border border-maroon-100 shadow-xs">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-amber-100 text-amber-800 shrink-0">
-                    <AlertTriangle className="w-5 h-5" />
+                  <div className="p-2 rounded-xl bg-maroon-100 text-maroon-800 shrink-0">
+                    <AlertTriangle className="w-5 h-5 text-maroon-700" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-black uppercase tracking-wider text-amber-900">
+                    <h4 className="text-xs font-black uppercase tracking-wider text-maroon-900">
                       Day Register Is Not Opened
                     </h4>
-                    <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
                       Start today's register by entering the starting physical cash float in your drawer
                       (for change and coins). All sales and cash expenses will be tracked automatically.
                     </p>
@@ -252,8 +253,8 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                         type="button"
                         onClick={() => setOpeningCash(preset.toString())}
                         className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${openingCash === preset.toString()
-                            ? 'bg-maroon-700 text-white shadow-xs'
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                          ? 'bg-maroon-700 text-white shadow-xs'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                           }`}
                       >
                         ₹{preset}
@@ -276,13 +277,6 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-bold transition-all"
-                  >
-                    Skip For Now
-                  </button>
                   <button
                     type="submit"
                     disabled={loading}
@@ -355,9 +349,16 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                       <div className="text-base sm:text-lg font-mono font-black text-forest-700">
                         ₹{parseFloat(currentShift.cash_sales).toFixed(2)}
                       </div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">
-                        Cash & split sales
-                      </div>
+                      {parseFloat(currentShift.change_given_total || '0') > 0 ? (
+                        <div className="text-[10px] text-slate-500 mt-1 flex items-center justify-between border-t border-slate-100 pt-1 font-mono">
+                          <span>Recv: ₹{parseFloat(currentShift.cash_received_gross || currentShift.cash_sales).toFixed(0)}</span>
+                          <span className="text-rose-600">Change: -₹{parseFloat(currentShift.change_given_total || '0').toFixed(0)}</span>
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-slate-400 mt-0.5">
+                          Cash & split sales
+                        </div>
+                      )}
                     </div>
 
                     {/* 3. UPI Digital Sales (Brand Maroon Badge) */}
@@ -423,6 +424,55 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                       </div>
                       <div className="text-[10px] text-slate-400 mt-0.5">
                         {currentShift.confirmed_bills_count} bills ({currentShift.void_bills_count} void)
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Physical Cash Drawer Tally & Movement Breakdown */}
+                  <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs space-y-2">
+                    <div className="flex items-center justify-between font-extrabold text-slate-800 text-[11px] uppercase tracking-wider">
+                      <span className="flex items-center gap-1.5">
+                        <Wallet className="w-3.5 h-3.5 text-maroon-700" />
+                        Physical Cash Drawer Tally
+                      </span>
+                      <span className="font-mono text-xs font-black text-slate-900">
+                        ₹{parseFloat(currentShift.expected_cash).toFixed(2)}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 pt-1 text-[11px] font-mono">
+                      <div className="flex items-center justify-between text-slate-600">
+                        <span className="font-sans">Opening Float:</span>
+                        <span>₹{parseFloat(currentShift.opening_cash).toFixed(2)}</span>
+                      </div>
+
+                      <div className="flex items-center justify-between text-forest-700">
+                        <span className="font-sans">(+) Cash Received from Customers:</span>
+                        <span className="font-bold">+₹{parseFloat(currentShift.cash_received_gross || currentShift.cash_sales).toFixed(2)}</span>
+                      </div>
+
+                      {parseFloat(currentShift.change_given_total || '0') > 0 && (
+                        <div className="flex items-center justify-between text-rose-600">
+                          <span className="font-sans">(-) Change Returned:</span>
+                          <span className="font-bold">-₹{parseFloat(currentShift.change_given_total || '0').toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-slate-800 border-t border-slate-200/80 pt-1 font-bold">
+                        <span className="font-sans">(=) Net Cash Collected:</span>
+                        <span>₹{parseFloat(currentShift.cash_sales).toFixed(2)}</span>
+                      </div>
+
+                      {parseFloat(currentShift.cash_expenses) > 0 && (
+                        <div className="flex items-center justify-between text-rose-600">
+                          <span className="font-sans">(-) Shop Expenses (Paid from Drawer):</span>
+                          <span className="font-bold">-₹{parseFloat(currentShift.cash_expenses).toFixed(2)}</span>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between text-maroon-900 font-extrabold border-t border-dashed border-slate-300 pt-1.5 text-xs">
+                        <span className="font-sans font-bold">Total Physical Cash in Drawer:</span>
+                        <span className="text-sm font-black">₹{parseFloat(currentShift.expected_cash).toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -500,10 +550,10 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                   {closingActual !== '' && !isNaN(actualAmount) && (
                     <div
                       className={`p-3.5 rounded-2xl border flex items-center justify-between text-xs font-bold transition-all ${Math.abs(difference) < 0.01
-                          ? 'bg-forest-50 border-forest-200 text-forest-800'
-                          : difference < 0
-                            ? 'bg-rose-50 border-rose-200 text-rose-800'
-                            : 'bg-forest-50 border-forest-200 text-forest-800'
+                        ? 'bg-forest-50 border-forest-200 text-forest-800'
+                        : difference < 0
+                          ? 'bg-rose-50 border-rose-200 text-rose-800'
+                          : 'bg-forest-50 border-forest-200 text-forest-800'
                         }`}
                     >
                       <div className="flex items-center gap-2">

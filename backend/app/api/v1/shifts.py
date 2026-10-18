@@ -57,6 +57,8 @@ async def compute_shift_cashflow(db: AsyncSession, shift: Shift) -> ShiftCashflo
     void_count = (await db.execute(void_stmt)).scalar() or 0
 
     cash_sales = Decimal("0.00")
+    cash_received_gross = Decimal("0.00")
+    change_given_total = Decimal("0.00")
     upi_sales = Decimal("0.00")
     card_sales = Decimal("0.00")
 
@@ -64,6 +66,10 @@ async def compute_shift_cashflow(db: AsyncSession, shift: Shift) -> ShiftCashflo
         amt = Decimal(str(b.total_amount))
         if b.payment_mode == "CASH":
             cash_sales += amt
+            tender = Decimal(str(b.cash_tendered)) if b.cash_tendered is not None else amt
+            change = Decimal(str(b.change_given)) if b.change_given is not None else Decimal("0.00")
+            cash_received_gross += tender
+            change_given_total += change
         elif b.payment_mode == "UPI":
             upi_sales += amt
         elif b.payment_mode == "CARD":
@@ -75,8 +81,13 @@ async def compute_shift_cashflow(db: AsyncSession, shift: Shift) -> ShiftCashflo
             cash_sales += cash_part
             upi_sales += upi_part
             card_sales += card_part
+            tender = Decimal(str(b.cash_tendered)) if b.cash_tendered is not None else cash_part
+            change = Decimal(str(b.change_given)) if b.change_given is not None else Decimal("0.00")
+            cash_received_gross += tender
+            change_given_total += change
         else:
             cash_sales += amt
+            cash_received_gross += amt
 
     total_sales = cash_sales + upi_sales + card_sales
 
@@ -116,6 +127,8 @@ async def compute_shift_cashflow(db: AsyncSession, shift: Shift) -> ShiftCashflo
         opened_by_name=opened_by_name,
         opening_cash=Decimal(str(shift.opening_cash)),
         cash_sales=cash_sales,
+        cash_received_gross=cash_received_gross,
+        change_given_total=change_given_total,
         upi_sales=upi_sales,
         card_sales=card_sales,
         total_sales=total_sales,

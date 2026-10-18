@@ -17,6 +17,8 @@ class Bill(Base):
     total_amount = Column(Numeric(12, 2, asdecimal=True), nullable=False)
     payment_mode = Column(String(20), default="CASH", nullable=False)
     split_details = Column(JSON, nullable=True)
+    cash_tendered = Column(Numeric(12, 2, asdecimal=True), nullable=True)
+    change_given = Column(Numeric(12, 2, asdecimal=True), nullable=True)
     status = Column(String(20), default="CONFIRMED", nullable=False, index=True)
     void_reason = Column(Text, nullable=True)
     voided_at = Column(DateTime(timezone=True), nullable=True)

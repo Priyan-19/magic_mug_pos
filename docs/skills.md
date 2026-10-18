@@ -56,6 +56,7 @@ MAGIC MUG/
 │   │   │       ├── categories.py
 │   │   │       ├── products.py
 │   │   │       ├── bills.py
+│   │   │       ├── shifts.py
 │   │   │       ├── expenses.py
 │   │   │       └── analytics.py
 │   │   ├── core/
@@ -67,15 +68,14 @@ MAGIC MUG/
 │   │   │   ├── category.py
 │   │   │   ├── product.py
 │   │   │   ├── bill.py
-│   │   │   ├── expense.py
-│   │   │   └── audit.py
+│   │   │   ├── shift.py
+│   │   │   └── expense.py
 │   │   ├── schemas/             # Pydantic Request/Response DTOs
 │   │   ├── services/            # Core business logic services
 │   │   │   ├── billing_service.py
 │   │   │   ├── analytics_service.py
 │   │   │   └── auth_service.py
 │   │   └── main.py              # FastAPI app initialization & CORS
-│   ├── tests/                   # Pytest test suite
 │   ├── requirements.txt
 │   └── Dockerfile
 │

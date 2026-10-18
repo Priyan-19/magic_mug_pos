@@ -12,6 +12,8 @@ class BillItemCreate(BaseModel):
 class BillCreate(BaseModel):
     payment_mode: str = Field("CASH", pattern="^(CASH|CARD|UPI|SPLIT)$")
     split_details: Optional[dict] = Field(None, examples=[{"cash": "38.00", "upi": "100.00"}])
+    cash_tendered: Optional[Decimal] = Field(default=None, ge=Decimal("0.00"))
+    change_given: Optional[Decimal] = Field(default=None, ge=Decimal("0.00"))
     discount_amount: Decimal = Field(default=Decimal("0.00"), ge=Decimal("0.00"))
     tax_amount: Decimal = Field(default=Decimal("0.00"), ge=Decimal("0.00"))
     items: List[BillItemCreate] = Field(..., min_length=1)
@@ -37,6 +39,8 @@ class BillResponse(BaseModel):
     total_amount: Decimal
     payment_mode: str
     split_details: Optional[dict] = None
+    cash_tendered: Optional[Decimal] = None
+    change_given: Optional[Decimal] = None
     shift_id: Optional[int] = None
     status: str
     void_reason: Optional[str] = None

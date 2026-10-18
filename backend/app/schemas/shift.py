@@ -23,6 +23,8 @@ class ShiftCashflowSummary(BaseModel):
     opened_by_name: str
     opening_cash: Decimal
     cash_sales: Decimal = Decimal("0.00")
+    cash_received_gross: Decimal = Decimal("0.00")
+    change_given_total: Decimal = Decimal("0.00")
     upi_sales: Decimal = Decimal("0.00")
     card_sales: Decimal = Decimal("0.00")
     total_sales: Decimal = Decimal("0.00")

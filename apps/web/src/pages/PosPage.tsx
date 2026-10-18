@@ -182,6 +182,15 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
   };
 
   const handleSaveBill = async () => {
+    if (!currentShift || currentShift.status !== 'OPEN') {
+      showError(
+        'Register is Closed',
+        "Please open today's register and enter opening cash float before creating bills."
+      );
+      setIsShiftModalOpen(true);
+      return;
+    }
+
     if (cartItems.length === 0) {
       showError('Cart is Empty', 'Please add products before checking out');
       return;
@@ -203,6 +212,21 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
 
     try {
       setIsSubmitting(true);
+      let cashTenderedVal: number | undefined = undefined;
+      let changeGivenVal: number | undefined = undefined;
+      if (paymentMode === 'CASH') {
+        if (cashReceivedVal > 0) {
+          cashTenderedVal = cashReceivedVal;
+          changeGivenVal = changeToReturn;
+        } else {
+          cashTenderedVal = totalAmount;
+          changeGivenVal = 0;
+        }
+      } else if (paymentMode === 'SPLIT') {
+        cashTenderedVal = splitCashVal;
+        changeGivenVal = 0;
+      }
+
       const payload: any = {
         payment_mode: paymentMode,
         discount_amount: discountAmount,
@@ -211,6 +235,8 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
           CASH: splitCashVal,
           UPI: splitUpiVal,
         } : undefined,
+        cash_tendered: cashTenderedVal,
+        change_given: changeGivenVal,
         items: cartItems.map((i) => ({
           product_id: i.product.id,
           quantity: i.quantity,
@@ -289,16 +315,16 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
       <div className={`flex-1 h-full overflow-y-auto pr-1 sm:pr-2 space-y-3 sm:space-y-4 md:space-y-4 lg:space-y-6 min-w-0 ${mobileView === 'cart' ? 'hidden md:block' : 'block'}`}>
         {/* Non-blocking Shift Notice if register is closed */}
         {(!currentShift || currentShift.status !== 'OPEN') && (
-          <div className="p-3 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200/80 flex items-center justify-between gap-3 animate-fade-in shadow-xs">
+          <div className="p-3 rounded-2xl bg-gradient-to-r from-maroon-50 via-maroon-50/60 to-slate-50 border border-maroon-200/90 flex items-center justify-between gap-3 animate-fade-in shadow-xs">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="p-2 rounded-xl bg-amber-500 text-white flex-shrink-0">
+              <div className="p-2 rounded-xl bg-maroon-700 text-white flex-shrink-0 shadow-xs">
                 <Wallet className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <div className="font-extrabold text-xs text-amber-900 leading-tight">
+                <div className="font-extrabold text-xs text-maroon-900 leading-tight">
                   Day Register is Not Open
                 </div>
-                <div className="text-[11px] text-amber-700/80 truncate">
+                <div className="text-[11px] text-maroon-700/80 truncate">
                   Open shift and enter float to track live drawer cashflow
                 </div>
               </div>
@@ -306,7 +332,7 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
             <button
               type="button"
               onClick={() => setIsShiftModalOpen(true)}
-              className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all flex-shrink-0 shadow-xs cursor-pointer active:scale-95"
+              className="px-3 py-1.5 rounded-xl bg-maroon-700 hover:bg-maroon-800 text-white text-xs font-bold transition-all flex-shrink-0 shadow-xs cursor-pointer active:scale-95"
             >
               Open Register
             </button>

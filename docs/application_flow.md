@@ -158,12 +158,127 @@ Navigate Directly to POS / Terminal Dashboard
 
 ---
 
-## 5. Billing Flow (Core Transaction Engine)
+## 5. Daily Register & Cash Drawer Flow
+
+The POS enforces a mandatory daily register (shift) workflow before any billing can occur.
+
+### 5.1 Open Register (Start of Day)
+```
+   Cashier opens POS Terminal
+                 |
+                 v
+   System checks: Is there an OPEN shift for today?
+                 |
+        +--------+--------+
+        |                 |
+       Yes                No
+        |                 |
+        v                 v
+   POS Ready         Show "Day Register Is Not Open" Banner
+   for Billing       Block checkout / billing
+                          |
+                          v
+                   Click "Open Register" or Header Register Button
+                          |
+                          v
+                   Open "Daily Register & Cashflow" Modal
+                          |
+                          v
+                   Enter Opening Cash Float (₹)
+                   (Quick presets: ₹0, ₹500, ₹1000, ₹1500, ₹2000)
+                   Optional: Enter Opening Notes
+                          |
+                          v
+                   POST /api/v1/shifts/open
+                   Payload: { opening_cash, opening_notes }
+                          |
+                          v
+                   FastAPI creates Shift record (status: OPEN)
+                          |
+                          v
+                   Banner disappears, POS Ready for Billing
+```
+
+### 5.2 Live Cash Drawer Tally (During Shift)
+```
+   Shift is OPEN → Cashier processes bills throughout the day
+                          |
+                          v
+               GET /api/v1/shifts/current/cashflow
+                          |
+                          v
+               Backend aggregates from bills & expenses tables:
+
+               Physical Cash Drawer Tally:
+               ┌──────────────────────────────────────────────┐
+               │  Opening Float:                    ₹1000.00  │
+               │  (+) Cash Received from Customers: +₹850.00  │
+               │  (-) Change Returned:              -₹25.00   │
+               │  (=) Net Cash Collected:            ₹825.00  │
+               │  (-) Shop Expenses (from Drawer):  -₹200.00  │
+               │  ────────────────────────────────────────     │
+               │  Total Physical Cash in Drawer:   ₹1625.00   │
+               └──────────────────────────────────────────────┘
+
+               Formula:
+               Expected = Opening Float
+                        + Cash Received (Gross)
+                        - Change Returned
+                        - Cash Expenses
+```
+
+### 5.3 Close Register (End of Day)
+```
+   Cashier clicks "Close Register" tab in Shift Modal
+                          |
+                          v
+               System shows Expected Cash in Drawer
+                          |
+                          v
+               Cashier counts physical cash and enters Actual Amount
+                          |
+                          v
+               System computes Variance:
+               Variance = Actual - Expected
+               (Positive = surplus, Negative = shortage)
+                          |
+                          v
+               Optional: Enter Closing Notes
+                          |
+                          v
+               POST /api/v1/shifts/close
+               Payload: { closing_cash_actual, closing_notes }
+                          |
+                          v
+               FastAPI updates Shift record:
+               - status → CLOSED
+               - closing_cash_actual, closing_cash_expected, closing_difference
+               - closed_at → current timestamp
+                          |
+                          v
+               Register closed, billing blocked until next day's register opens
+```
+
+---
+
+## 6. Billing Flow (Core Transaction Engine)
 
 This is the primary operational flow of the Cafe POS system.
 
 ```
                   Cashier opens "New Bill"
+                             |
+                             v
+              ┌─────────────────────────────┐
+              │ Is Daily Register OPEN?     │
+              └──────────┬──────────────────┘
+                         |
+                   Yes?  /  No?
+                   /         \
+                  v           v
+          Continue      Block Checkout
+          Billing       Show "Open Register" Modal
+                        (Must open register first)
                              |
                              v
            Fetch Active Products & Categories
@@ -190,14 +305,24 @@ This is the primary operational flow of the Cafe POS system.
                  Yes                   No                         |
                  /                      \                         |
                 +                        v                        |
-                               Click "Save Bill"                  |
+                               Click "Confirm & Pay"              |
+                                         |                        |
+                                         v                        |
+                              Enter Cash Tendered (if CASH mode)  |
+                              System calculates Change to Return  |
                                          |                        |
                                          v                        |
                               POST /api/v1/bills                  |
-                              Payload: { items, payment_mode }    |
+                              Payload: { items, payment_mode,     |
+                                cash_tendered, change_given }     |
                                          |                        |
                                          v                        |
                              FastAPI Billing Service              |
+                                         |                        |
+                  ┌──────────────────────┴──────────────────┐    |
+                  │ Check: active_shift_id exists?          │    |
+                  │ If No → HTTP 400 "Register not open!"   │    |
+                  └──────────────────────┬──────────────────┘    |
                                          |                        |
                            +-------------+-------------+          |
                            | Begin DB Transaction      |          |
@@ -220,7 +345,8 @@ This is the primary operational flow of the Cafe POS system.
              Format: MUG-YYYYMMDD-XXXX                            |
                         |                                         |
                         v                                         |
-             Insert `bills` Record                                |
+             Insert `bills` Record (with shift_id,                |
+               cash_tendered, change_given)                       |
                         |                                         |
                         v                                         |
              Insert `bill_items` Records                          |
@@ -243,7 +369,7 @@ This is the primary operational flow of the Cafe POS system.
 
 ---
 
-## 6. Bill Search & History Flow
+## 7. Bill Search & History Flow
 
 ```
    User opens "Bill History"
@@ -286,7 +412,7 @@ This is the primary operational flow of the Cafe POS system.
 
 ---
 
-## 7. Bill Void Workflow
+## 8. Bill Void Workflow
 
 Confirmed bills CANNOT be deleted. They must undergo a controlled void procedure.
 
@@ -343,7 +469,7 @@ Exclude Bill from Regular Revenue Analytics
 
 ---
 
-## 8. Sales Analytics Flow
+## 9. Sales Analytics Flow
 
 Sales analytics are computed using database aggregations (SQL `SUM`, `COUNT`, `GROUP BY`) rather than fetching raw records to the frontend.
 
@@ -407,7 +533,7 @@ Sales analytics are computed using database aggregations (SQL `SUM`, `COUNT`, `G
 
 ---
 
-## 9. Expense Management Flow
+## 10. Expense Management Flow
 
 ```
    User (Owner) clicks "Add Expense"
@@ -438,7 +564,7 @@ Sales analytics are computed using database aggregations (SQL `SUM`, `COUNT`, `G
 
 ---
 
-## 10. Unified Error Handling Flow
+## 11. Unified Error Handling Flow
 
 ```
                  Client API Call
@@ -485,7 +611,7 @@ Frontend intercepts response:
 
 ---
 
-## 11. Cloud Deployment & Dynamic Server Switching
+## 12. Cloud Deployment & Dynamic Server Switching
 
 ```
                  Mobile App (Android / iOS)

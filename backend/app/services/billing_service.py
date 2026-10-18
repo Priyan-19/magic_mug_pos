@@ -91,10 +91,41 @@ class BillingService:
         total = subtotal - discount + tax
         bill_number = await BillingService.generate_bill_number(db, now)
 
+        # Compute cash tendered and change given for cash or split transactions
+        cash_tendered = None
+        change_given = None
+        if payload.payment_mode == "CASH":
+            if payload.cash_tendered is not None:
+                cash_tendered = Decimal(str(payload.cash_tendered))
+                if payload.change_given is not None:
+                    change_given = Decimal(str(payload.change_given))
+                else:
+                    change_given = max(Decimal("0.00"), cash_tendered - total)
+            else:
+                cash_tendered = total
+                change_given = Decimal("0.00")
+        elif payload.payment_mode == "SPLIT" and payload.split_details:
+            split_cash = Decimal(str(payload.split_details.get("CASH") or payload.split_details.get("cash") or "0.00"))
+            if payload.cash_tendered is not None:
+                cash_tendered = Decimal(str(payload.cash_tendered))
+                if payload.change_given is not None:
+                    change_given = Decimal(str(payload.change_given))
+                else:
+                    change_given = max(Decimal("0.00"), cash_tendered - split_cash)
+            else:
+                cash_tendered = split_cash
+                change_given = Decimal("0.00")
+
         # Check if an active shift is open to associate the bill
         from app.models.shift import Shift
         shift_stmt = select(Shift.id).where(Shift.status == "OPEN").order_by(Shift.id.desc())
         active_shift_id = (await db.execute(shift_stmt)).scalars().first()
+
+        if not active_shift_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Daily Register is closed! Please open today's register and enter opening float before billing."
+            )
 
         bill = Bill(
             bill_number=bill_number,
@@ -105,6 +136,8 @@ class BillingService:
             total_amount=total,
             payment_mode=payload.payment_mode,
             split_details=payload.split_details,
+            cash_tendered=cash_tendered,
+            change_given=change_given,
             shift_id=active_shift_id,
             status="CONFIRMED",
             created_by=user_id,

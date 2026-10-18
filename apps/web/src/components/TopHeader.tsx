@@ -134,10 +134,10 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           <button
             type="button"
             onClick={() => setIsShiftModalOpen(true)}
-            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-2xl bg-amber-50 hover:bg-amber-100/90 border border-amber-200 text-amber-900 text-[11px] sm:text-xs font-bold transition-all shadow-xs cursor-pointer group active:scale-95"
+            className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-2xl bg-maroon-50 hover:bg-maroon-100/90 border border-maroon-200 text-maroon-900 text-[11px] sm:text-xs font-bold transition-all shadow-xs cursor-pointer group active:scale-95"
             title="Register Closed - Click to Enter Float & Open Register"
           >
-            <Wallet className="w-3.5 h-3.5 text-amber-700" />
+            <Wallet className="w-3.5 h-3.5 text-maroon-700" />
             <span className="whitespace-nowrap">Open Register</span>
           </button>
         )}

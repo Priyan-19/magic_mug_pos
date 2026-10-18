@@ -68,6 +68,8 @@ export interface Bill {
   total_amount: string;
   payment_mode: 'CASH' | 'CARD' | 'UPI' | 'SPLIT';
   split_details?: { cash?: number | string; upi?: number | string; card?: number | string } | null;
+  cash_tendered?: string | number | null;
+  change_given?: string | number | null;
   shift_id?: number | null;
   status: 'CONFIRMED' | 'VOID';
   void_reason?: string;
@@ -218,6 +220,8 @@ export interface ShiftCashflowSummary {
   opened_by_name: string;
   opening_cash: string;
   cash_sales: string;
+  cash_received_gross?: string;
+  change_given_total?: string;
   upi_sales: string;
   card_sales: string;
   total_sales: string;

@@ -48,10 +48,11 @@ Build a fast, reliable, offline-resilient, single-tenant cafe management system 
 8. **Sales Analytics**: Backend SQL-aggregated metrics for Daily, Weekly, Monthly performance, product sales ranking, top/slow-moving item identification.
 9. **Expense Management**: Expense entry, expense categories, date-based querying, net sales calculation (`Gross Revenue - Expenses`).
 10. **Dynamic Cloud & Network Configuration**: Dynamic backend URL switching in mobile app to connect to Cloud API (over 4G/5G/Wi-Fi) or local staging server with 1-click test connection.
-11. **Audit Logging**: Structured operational log tracking critical actions (`LOGIN`, `PRODUCT_UPDATE`, `BILL_CREATE`, `BILL_VOID`, `EXPENSE_CREATE`).
+11. **Audit Logging**: Structured operational log tracking critical actions (`LOGIN`, `PRODUCT_UPDATE`, `BILL_CREATE`, `BILL_VOID`, `EXPENSE_CREATE`, `SHIFT_OPEN`, `SHIFT_CLOSE`).
+12. **Daily Register & Cash Drawer Management**: Strict shift enforcement before billing, opening float tracking, split payment calculations (Cash + UPI), cash tendered and change return tracking, and closing tender reconciliation with cash drawer over/short variance logging.
 
 ### 3.2 Explicitly Out of Scope (v1.0)
-- Payment Gateway / Online Payment Processing (UPI, Credit/Debit cards). The POS records payment method (Cash, Card, UPI QR displayed statically), but does not process payments via PG APIs.
+- Payment Gateway / Online Payment Processing (UPI, Credit/Debit cards). The POS records payment method (Cash, Card, UPI QR displayed statically, Split), but does not process payments via PG APIs.
 - Customer-facing Self-Ordering App or QR Table Ordering.
 - Multi-branch / Multi-tenant SaaS infrastructure.
 - Inventory Raw Material Procurement & Supplier PO System.
@@ -65,8 +66,9 @@ Build a fast, reliable, offline-resilient, single-tenant cafe management system 
 | Feature / Action | OWNER | CASHIER |
 |---|:---:|:---:|
 | User Login & Password Reset | ✅ | ✅ |
+| Open / Close Daily Register (Shift) | ✅ | ✅ |
 | View Active Product Catalog | ✅ | ✅ |
-| Create New Bill | ✅ | ✅ |
+| Create New Bill (Requires Open Shift) | ✅ | ✅ |
 | View Today's Bills & Details | ✅ | ✅ |
 | Search Historical Bills | ✅ | ✅ |
 | Void Bill | ✅ | ❌ *(Requires Owner Approval)* |
@@ -74,6 +76,7 @@ Build a fast, reliable, offline-resilient, single-tenant cafe management system 
 | Deactivate Products | ✅ | ❌ |
 | Create / Edit Categories | ✅ | ❌ |
 | View Sales Analytics (Daily/Weekly/Monthly) | ✅ | ❌ |
+| View Shift Reconciliation & Variances | ✅ | ❌ |
 | Create & Manage Expenses | ✅ | ❌ |
 | View System Audit Logs | ✅ | ❌ |
 
@@ -92,11 +95,16 @@ Build a fast, reliable, offline-resilient, single-tenant cafe management system 
 +---------------+       +---------------+       +---------------+
 |     users     | 1---N |     bills     | 1---N |  bill_items   |
 +---------------+       +---------------+       +---------------+
-     | 1                     | 1
-     | N                     | 1
-+---------------+       +---------------+
-|   expenses    |       |  audit_logs   |
-+---------------+       +---------------+
+     | 1   | 1                 | N
+     | N   | N                 | 1
++----+--+ +----+-----+         |
+|expense| |  shifts  |---------+
++-------+ +----------+
+     | 1
+     | 1
++----+----------+
+|  audit_logs   |
++---------------+
 ```
 
 ### 5.2 Detailed Table Schemas
@@ -113,6 +121,29 @@ Build a fast, reliable, offline-resilient, single-tenant cafe management system 
 | `is_active` | BOOLEAN | DEFAULT TRUE, NOT NULL | Account active flag |
 | `created_at` | TIMESTAMPTZ | DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
 | `updated_at` | TIMESTAMPTZ | DEFAULT CURRENT_TIMESTAMP | Last update timestamp |
+
+#### Table: `shifts`
+| Field | Type | Constraints | Description |
+|---|---|---|---|
+| `id` | BIGINT | PRIMARY KEY, GENERATED | Shift / Register ID |
+| `user_id` | BIGINT | FOREIGN KEY (`users.id`), NOT NULL | Cashier who opened the shift |
+| `station_name` | VARCHAR(50) | DEFAULT 'Main Register', NOT NULL | Physical terminal or station identifier |
+| `status` | VARCHAR(20) | DEFAULT 'OPEN', CHECK(`OPEN`, `CLOSED`) | Shift active status |
+| `opened_at` | TIMESTAMPTZ | DEFAULT CURRENT_TIMESTAMP, NOT NULL | Shift start timestamp |
+| `closed_at` | TIMESTAMPTZ | NULLABLE | Shift close timestamp |
+| `opening_cash` | NUMERIC(12, 2) | DEFAULT 0.00, CHECK(opening_cash >= 0) | Starting cash drawer float |
+| `opening_notes` | TEXT | NULLABLE | Cashier notes when opening |
+| `closing_cash_actual` | NUMERIC(12, 2) | NULLABLE | Actual physical cash counted at close |
+| `closing_cash_expected` | NUMERIC(12, 2) | NULLABLE | Authoritative calculated cash expected |
+| `closing_difference` | NUMERIC(12, 2) | NULLABLE | Discrepancy (`actual - expected`, over/short) |
+| `closing_notes` | TEXT | NULLABLE | Cashier notes explaining discrepancy |
+| `created_at` | TIMESTAMPTZ | DEFAULT CURRENT_TIMESTAMP | Record creation timestamp |
+| `updated_at` | TIMESTAMPTZ | DEFAULT CURRENT_TIMESTAMP | Last update timestamp |
+
+> **Indexes**:
+> - `CREATE INDEX idx_shifts_user ON shifts(user_id);`
+> - `CREATE INDEX idx_shifts_status ON shifts(status);`
+> - `CREATE INDEX idx_shifts_status_opened ON shifts(status, opened_at);`
 
 #### Table: `categories`
 | Field | Type | Constraints | Description |
@@ -149,10 +180,14 @@ Build a fast, reliable, offline-resilient, single-tenant cafe management system 
 | `discount_amount` | NUMERIC(10, 2) | DEFAULT 0.00, NOT NULL | Applied discount value |
 | `tax_amount` | NUMERIC(10, 2) | DEFAULT 0.00, NOT NULL | Applied tax value |
 | `total_amount` | NUMERIC(12, 2) | NOT NULL, CHECK(total_amount >= 0) | Final payable total |
-| `payment_mode` | VARCHAR(20) | DEFAULT 'CASH', CHECK(`CASH`, `CARD`, `UPI`) | Recorded payment method |
+| `payment_mode` | VARCHAR(20) | DEFAULT 'CASH', CHECK(`CASH`, `CARD`, `UPI`, `SPLIT`) | Recorded payment method |
+| `split_details` | JSONB | NULLABLE | Breakdown for split payment (e.g., `{"cash": 100, "upi": 50}`) |
+| `cash_tendered` | NUMERIC(12, 2) | NULLABLE | Exact cash received from customer |
+| `change_given` | NUMERIC(12, 2) | NULLABLE | Change returned to customer |
 | `status` | VARCHAR(20) | DEFAULT 'CONFIRMED', CHECK(`CONFIRMED`, `VOID`) | Bill lifecycle status |
 | `void_reason` | TEXT | NULLABLE | Mandatory reason if status is `VOID` |
 | `voided_at` | TIMESTAMPTZ | NULLABLE | Timestamp of void action |
+| `shift_id` | BIGINT | FOREIGN KEY (`shifts.id`), NULLABLE | Associated daily register shift |
 | `created_by` | BIGINT | FOREIGN KEY (`users.id`), NOT NULL | User who created the bill |
 | `created_at` | TIMESTAMPTZ | DEFAULT CURRENT_TIMESTAMP | Record timestamp |
 | `updated_at` | TIMESTAMPTZ | DEFAULT CURRENT_TIMESTAMP | Record timestamp |
@@ -160,6 +195,7 @@ Build a fast, reliable, offline-resilient, single-tenant cafe management system 
 > **Indexes**:
 > - `CREATE INDEX idx_bills_date_status ON bills(bill_date, status);`
 > - `CREATE INDEX idx_bills_number ON bills(bill_number);`
+> - `CREATE INDEX idx_bills_shift ON bills(shift_id);`
 
 #### Table: `bill_items`
 | Field | Type | Constraints | Description |
@@ -225,6 +261,13 @@ Build a fast, reliable, offline-resilient, single-tenant cafe management system 
 6. **Bill Void Rule**:
    Bills CANNOT be deleted. Voiding a bill sets `status = 'VOID'`, requires an explicit void reason string, records `voided_at`, creates an entry in `audit_logs`, and immediately excludes the bill from regular revenue aggregations.
 
+7. **Daily Register & Cash Drawer Reconciliation**:
+   - **Mandatory Active Shift**: A bill cannot be created unless an active shift (`status = 'OPEN'`) exists for the current station/user. Attempts to checkout with a closed register trigger an immediate HTTP 400 Bad Request.
+   - **Drawer Balance Calculation**:
+     $$\text{Expected Cash} = \text{Opening Cash Float} + \text{Total Cash Sales In} - \text{Cash Expenses Out}$$
+   - **Tender & Change Tracking**: For `CASH` and `SPLIT` transactions, `cash_tendered` and `change_given` are recorded.
+   - **Over / Short Variance**: Upon closing the register, the cashier counts physical cash (`closing_cash_actual`). The system calculates `closing_difference = closing_cash_actual - closing_cash_expected` and stores variance notes for audit.
+
 ---
 
 ## 7. API Specification
@@ -253,11 +296,14 @@ All endpoints are prefixed with `/api/v1`. Authenticated endpoints require `Auth
 - `DELETE /api/v1/products/{id}` — Soft deactivate product (`OWNER` only).
 
 ### 7.4 Billing
-- `POST /api/v1/bills` — Create new bill.
+- `POST /api/v1/bills` — Create new bill (requires active open shift).
   - **Request**:
     ```json
     {
-      "payment_mode": "CASH",
+      "payment_mode": "SPLIT",
+      "split_details": { "cash": 100.00, "upi": 50.00 },
+      "cash_tendered": 100.00,
+      "change_given": 0.00,
       "discount_amount": 0.00,
       "tax_amount": 0.00,
       "items": [
@@ -266,7 +312,7 @@ All endpoints are prefixed with `/api/v1`. Authenticated endpoints require `Auth
       ]
     }
     ```
-  - **Response 201**: Full generated bill object including `bill_number`, recalculated `subtotal`, `total_amount`, snapshot line items, and timestamp.
+  - **Response 201**: Full generated bill object including `bill_number`, `shift_id`, recalculated `subtotal`, `total_amount`, snapshot line items, and timestamp.
 
 - `GET /api/v1/bills?page=1&limit=20&start_date=2026-10-01&end_date=2026-10-04&status=CONFIRMED&search=MUG-2026` — Paginated bill list with multi-filter search.
 - `GET /api/v1/bills/{id}` — Fetch bill header and snapshot item details.
@@ -274,14 +320,28 @@ All endpoints are prefixed with `/api/v1`. Authenticated endpoints require `Auth
   - **Request**: `{ "reason": "Customer changed mind / incorrect cashier input" }`
   - **Response 200**: Updated bill with `status: "VOID"`.
 
-### 7.5 Sales Analytics
+### 7.5 Daily Register & Shifts
+- `GET /api/v1/shifts/current` — Get current active open shift for station/user (or `null` if closed).
+- `POST /api/v1/shifts/open` — Open register shift with starting float amount.
+  - **Request**: `{ "opening_cash": 1000.00, "station_name": "Main Register", "opening_notes": "Morning opening float" }`
+  - **Response 200**: Active shift object.
+- `POST /api/v1/shifts/close` — Close current register with physical cash count.
+  - **Request**: `{ "closing_cash_actual": 1175.00, "closing_notes": "Exact match" }`
+  - **Response 200**: Closed shift object with `closing_cash_expected` and `closing_difference`.
+- `GET /api/v1/shifts/{id}/summary` — Fetch complete financial summary for a shift (opening float, cash/UPI/card sales, cash expenses, expected cash in drawer).
+
+### 7.6 Sales Analytics
 - `GET /api/v1/analytics/daily?date=2026-10-04` — Today's KPIs, hourly trend, top seller.
 - `GET /api/v1/analytics/weekly?start_date=2026-09-28` — 7-day sales breakdown by day, category performance.
 - `GET /api/v1/analytics/monthly?year=2026&month=10` — Daily trend across month, top/slow products.
 - `GET /api/v1/analytics/best-sellers?limit=10&start_date=...&end_date=...` — Product sales ranking by quantity sold & total revenue.
 - `GET /api/v1/analytics/slow-movers?limit=10&days=30` — Active products with lowest sales volume.
 
-### 7.6 Expenses
+### 7.7 Expenses
+- `GET /api/v1/expenses?start_date=...&end_date=...` — Fetch expense records.
+- `POST /api/v1/expenses` — Log new expense (`OWNER` only).
+- `PUT /api/v1/expenses/{id}` — Update expense (`OWNER` only).
+- `DELETE /api/v1/expenses/{id}` — Delete expense record (`OWNER` only).
 - `GET /api/v1/expenses?start_date=...&end_date=...` — Fetch expense records.
 - `POST /api/v1/expenses` — Log new expense (`OWNER` only).
 - `PUT /api/v1/expenses/{id}` — Update expense (`OWNER` only).
