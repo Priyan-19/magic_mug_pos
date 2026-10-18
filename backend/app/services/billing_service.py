@@ -42,9 +42,15 @@ class BillingService:
         subtotal = Decimal("0.00")
         bill_items: List[BillItem] = []
 
+        # Collect distinct product IDs and batch-fetch in a single query
+        product_ids = list({item_in.product_id for item_in in payload.items})
+        stmt = select(Product).where(Product.id.in_(product_ids))
+        result = await db.execute(stmt)
+        products_map = {p.id: p for p in result.scalars().all()}
+
         # Validate products and compute authoritative totals
         for item_in in payload.items:
-            product = await db.get(Product, item_in.product_id)
+            product = products_map.get(item_in.product_id)
             if not product:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,

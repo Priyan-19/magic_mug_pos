@@ -25,9 +25,15 @@ async def compute_shift_cashflow(db: AsyncSession, shift: Shift) -> ShiftCashflo
     """Computes exact live sales cashflow, drawer balance, and breakdown for a given shift."""
     end_time = shift.closed_at if shift.status == "CLOSED" else datetime.now(timezone.utc)
 
-    # 1. Fetch Confirmed Bills
+    # 1. Fetch Confirmed Bills (only necessary columns for fast computation)
     bills_stmt = (
-        select(Bill)
+        select(
+            Bill.total_amount,
+            Bill.payment_mode,
+            Bill.split_details,
+            Bill.cash_tendered,
+            Bill.change_given,
+        )
         .where(
             and_(
                 Bill.status == "CONFIRMED",
@@ -39,7 +45,7 @@ async def compute_shift_cashflow(db: AsyncSession, shift: Shift) -> ShiftCashflo
         )
     )
     bills_res = await db.execute(bills_stmt)
-    bills = bills_res.scalars().all()
+    bills = bills_res.all()
 
     # 2. Fetch Void Bills count
     void_stmt = (

@@ -18,6 +18,39 @@ import {
   ShiftCloseRequest,
 } from '../types';
 
+// ============================================================================
+// In-Memory Performance Caching & Request Deduplication
+// ============================================================================
+interface CacheEntry<T> {
+  data: T;
+  timestamp: number;
+}
+
+const CATALOG_CACHE_TTL = 3 * 60 * 1000; // 3 minutes TTL for menu catalog
+const catalogCache = new Map<string, CacheEntry<any>>();
+
+export const clearCatalogCache = () => {
+  catalogCache.clear();
+};
+
+let currentShiftPromise: Promise<ShiftCashflowSummary | null> | null = null;
+let lastShiftFetchTime = 0;
+let cachedShift: ShiftCashflowSummary | null = null;
+const SHIFT_CACHE_WINDOW = 3000; // 3s deduplication window for concurrent component mounts
+
+export const clearShiftCache = () => {
+  cachedShift = null;
+  lastShiftFetchTime = 0;
+  currentShiftPromise = null;
+};
+
+// Listen to window shift-updated events to invalidate cache
+if (typeof window !== 'undefined') {
+  window.addEventListener('shift-updated', () => {
+    clearShiftCache();
+  });
+}
+
 export const authService = {
   login: (username: string, password: string) =>
     api.post<TokenResponse>('/auth/login', { username, password }),
@@ -25,41 +58,98 @@ export const authService = {
 };
 
 export const catalogService = {
-  getCategories: (includeInactive = false) =>
-    api.get<Category[]>(`/categories?include_inactive=${includeInactive}`),
-  createCategory: (payload: { name: string; description?: string; display_order?: number; is_active?: boolean }) =>
-    api.post<Category>('/categories', payload),
-  updateCategory: (id: number, payload: Partial<Category>) =>
-    api.put<Category>(`/categories/${id}`, payload),
-  deleteCategory: (id: number) => api.del<{ success: boolean; message: string }>(`/categories/${id}`),
-  deactivateCategory: (id: number) => api.del<{ success: boolean; message: string }>(`/categories/${id}`),
+  getCategories: async (includeInactive = false, forceRefresh = false) => {
+    const key = `categories_${includeInactive}`;
+    const cached = catalogCache.get(key);
+    if (!forceRefresh && cached && Date.now() - cached.timestamp < CATALOG_CACHE_TTL) {
+      return cached.data as Category[];
+    }
+    const data = await api.get<Category[]>(`/categories?include_inactive=${includeInactive}`);
+    catalogCache.set(key, { data, timestamp: Date.now() });
+    return data;
+  },
+  createCategory: async (payload: { name: string; description?: string; display_order?: number; is_active?: boolean }) => {
+    clearCatalogCache();
+    return api.post<Category>('/categories', payload);
+  },
+  updateCategory: async (id: number, payload: Partial<Category>) => {
+    clearCatalogCache();
+    return api.put<Category>(`/categories/${id}`, payload);
+  },
+  deleteCategory: async (id: number) => {
+    clearCatalogCache();
+    return api.del<{ success: boolean; message: string }>(`/categories/${id}`);
+  },
+  deactivateCategory: async (id: number) => {
+    clearCatalogCache();
+    return api.del<{ success: boolean; message: string }>(`/categories/${id}`);
+  },
 
-  getProducts: (params?: { category_id?: number; active_only?: boolean; search?: string }) => {
+  getProducts: async (
+    params?: { category_id?: number; active_only?: boolean; search?: string },
+    forceRefresh = false
+  ) => {
     const q = new URLSearchParams();
     if (params?.category_id) q.append('category_id', params.category_id.toString());
     if (params?.active_only !== undefined) q.append('active_only', params.active_only.toString());
     if (params?.search) q.append('search', params.search);
-    return api.get<Product[]>(`/products?${q.toString()}`);
+    const key = `products_${q.toString()}`;
+    const cached = catalogCache.get(key);
+    // Only cache unfiltered or category-filtered lists (not search queries)
+    if (!forceRefresh && !params?.search && cached && Date.now() - cached.timestamp < CATALOG_CACHE_TTL) {
+      return cached.data as Product[];
+    }
+    const data = await api.get<Product[]>(`/products?${q.toString()}`);
+    if (!params?.search) {
+      catalogCache.set(key, { data, timestamp: Date.now() });
+    }
+    return data;
   },
   getProduct: (id: number) => api.get<Product>(`/products/${id}`),
-  createProduct: (payload: { category_id: number; name: string; description?: string; selling_price: string; image_url?: string; track_stock?: boolean; stock_quantity?: number }) =>
-    api.post<Product>('/products', payload),
-  updateProduct: (id: number, payload: Partial<Product>) =>
-    api.put<Product>(`/products/${id}`, payload),
-  updateStock: (id: number, payload: { track_stock?: boolean; stock_quantity?: number }) =>
-    api.patch<Product>(`/products/${id}/stock`, payload),
-  deleteProduct: (id: number) => api.del<{ success: boolean; message: string }>(`/products/${id}`),
-  deactivateProduct: (id: number) => api.del<{ success: boolean; message: string }>(`/products/${id}`),
+  createProduct: async (payload: {
+    category_id: number;
+    name: string;
+    description?: string;
+    selling_price: string;
+    image_url?: string;
+    track_stock?: boolean;
+    stock_quantity?: number;
+  }) => {
+    clearCatalogCache();
+    return api.post<Product>('/products', payload);
+  },
+  updateProduct: async (id: number, payload: Partial<Product>) => {
+    clearCatalogCache();
+    return api.put<Product>(`/products/${id}`, payload);
+  },
+  updateStock: async (id: number, payload: { track_stock?: boolean; stock_quantity?: number }) => {
+    clearCatalogCache();
+    return api.patch<Product>(`/products/${id}/stock`, payload);
+  },
+  deleteProduct: async (id: number) => {
+    clearCatalogCache();
+    return api.del<{ success: boolean; message: string }>(`/products/${id}`);
+  },
+  deactivateProduct: async (id: number) => {
+    clearCatalogCache();
+    return api.del<{ success: boolean; message: string }>(`/products/${id}`);
+  },
 };
 
 export const billingService = {
-  createBill: (payload: {
+  createBill: async (payload: {
     payment_mode: 'CASH' | 'CARD' | 'UPI' | 'SPLIT';
     split_details?: { cash?: number | string; upi?: number | string; card?: number | string };
     discount_amount?: string;
     tax_amount?: string;
     items: { product_id: number; quantity: number }[];
-  }) => api.post<Bill>('/bills', payload),
+  }) => {
+    const bill = await api.post<Bill>('/bills', payload);
+    // Invalidate shift cache and catalog (to reflect deducted stock)
+    clearShiftCache();
+    clearCatalogCache();
+    return bill;
+  },
 
   listBills: (params?: {
     page?: number;
@@ -83,8 +173,11 @@ export const billingService = {
 
   getBillDetail: (id: number) => api.get<Bill>(`/bills/${id}`),
 
-  voidBill: (id: number, reason: string) =>
-    api.post<Bill>(`/bills/${id}/void`, { reason }),
+  voidBill: async (id: number, reason: string) => {
+    const result = await api.post<Bill>(`/bills/${id}/void`, { reason });
+    clearShiftCache();
+    return result;
+  },
 };
 
 export const expenseService = {
@@ -95,11 +188,21 @@ export const expenseService = {
     if (params?.category) q.append('category', params.category);
     return api.get<ExpenseListResponse>(`/expenses?${q.toString()}`);
   },
-  createExpense: (payload: { category: string; description: string; amount: string; expense_date: string }) =>
-    api.post<Expense>('/expenses', payload),
-  updateExpense: (id: number, payload: Partial<Expense>) =>
-    api.put<Expense>(`/expenses/${id}`, payload),
-  deleteExpense: (id: number) => api.del<{ success: boolean; message: string }>(`/expenses/${id}`),
+  createExpense: async (payload: { category: string; description: string; amount: string; expense_date: string }) => {
+    const res = await api.post<Expense>('/expenses', payload);
+    clearShiftCache();
+    return res;
+  },
+  updateExpense: async (id: number, payload: Partial<Expense>) => {
+    const res = await api.put<Expense>(`/expenses/${id}`, payload);
+    clearShiftCache();
+    return res;
+  },
+  deleteExpense: async (id: number) => {
+    const res = await api.del<{ success: boolean; message: string }>(`/expenses/${id}`);
+    clearShiftCache();
+    return res;
+  },
 };
 
 export const analyticsService = {
@@ -133,8 +236,39 @@ export const analyticsService = {
 };
 
 export const shiftService = {
-  getCurrentShift: () => api.get<ShiftCashflowSummary | null>('/shifts/current'),
-  openShift: (payload: ShiftOpenRequest) => api.post<ShiftCashflowSummary>('/shifts/open', payload),
-  closeShift: (payload: ShiftCloseRequest) => api.post<ShiftCashflowSummary>('/shifts/close', payload),
+  getCurrentShift: async (forceRefresh = false): Promise<ShiftCashflowSummary | null> => {
+    const now = Date.now();
+    // Return cached value if within the short deduplication window
+    if (!forceRefresh && cachedShift !== null && now - lastShiftFetchTime < SHIFT_CACHE_WINDOW) {
+      return cachedShift;
+    }
+    // If a request is already in-flight, return the same promise to prevent duplicate network hits
+    if (!forceRefresh && currentShiftPromise) {
+      return currentShiftPromise;
+    }
+
+    currentShiftPromise = api
+      .get<ShiftCashflowSummary | null>('/shifts/current')
+      .then((data) => {
+        cachedShift = data;
+        lastShiftFetchTime = Date.now();
+        currentShiftPromise = null;
+        return data;
+      })
+      .catch((err) => {
+        currentShiftPromise = null;
+        throw err;
+      });
+
+    return currentShiftPromise;
+  },
+  openShift: async (payload: ShiftOpenRequest) => {
+    clearShiftCache();
+    return api.post<ShiftCashflowSummary>('/shifts/open', payload);
+  },
+  closeShift: async (payload: ShiftCloseRequest) => {
+    clearShiftCache();
+    return api.post<ShiftCashflowSummary>('/shifts/close', payload);
+  },
   getHistory: (limit = 15) => api.get<ShiftCashflowSummary[]>(`/shifts/history?limit=${limit}`),
 };
