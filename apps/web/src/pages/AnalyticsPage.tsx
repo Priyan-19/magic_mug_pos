@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   TrendingUp,
   Receipt,
@@ -28,7 +28,8 @@ export const AnalyticsPage: React.FC = () => {
   const [monthlyData, setMonthlyData] = useState<MonthlyAnalytics | null>(null);
   const [bestSellers, setBestSellers] = useState<BestSellerItem[]>([]);
   const [trackedProducts, setTrackedProducts] = useState<Product[]>([]);
-  const [_isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const activeRequestIdRef = useRef<number>(0);
 
   const { error: showError } = useToast();
 
@@ -37,8 +38,8 @@ export const AnalyticsPage: React.FC = () => {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   }, []);
 
-
   const loadAnalytics = useCallback(async () => {
+    const requestId = ++activeRequestIdRef.current;
     try {
       setIsLoading(true);
       const prodsPromise = catalogService.getProducts().catch(() => []);
@@ -49,6 +50,7 @@ export const AnalyticsPage: React.FC = () => {
           analyticsService.getBestSellers({ limit: 6 }),
           prodsPromise,
         ]);
+        if (requestId !== activeRequestIdRef.current) return;
         setDailyData(daily);
         setBestSellers(best);
         setTrackedProducts(prods.filter((p) => p.track_stock));
@@ -59,6 +61,7 @@ export const AnalyticsPage: React.FC = () => {
           analyticsService.getBestSellers({ limit: 6 }),
           prodsPromise,
         ]);
+        if (requestId !== activeRequestIdRef.current) return;
         setWeeklyData(weekly);
         setDailyData(daily);
         setBestSellers(best);
@@ -70,15 +73,19 @@ export const AnalyticsPage: React.FC = () => {
           analyticsService.getBestSellers({ limit: 6 }),
           prodsPromise,
         ]);
+        if (requestId !== activeRequestIdRef.current) return;
         setMonthlyData(monthly);
         setDailyData(daily);
         setBestSellers(best);
         setTrackedProducts(prods.filter((p) => p.track_stock));
       }
     } catch (err: any) {
+      if (requestId !== activeRequestIdRef.current) return;
       showError('Analytics Error', err.message || 'Failed to load analytics');
     } finally {
-      setIsLoading(false);
+      if (requestId === activeRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [timeView, showError]);
 
@@ -86,48 +93,30 @@ export const AnalyticsPage: React.FC = () => {
     loadAnalytics();
   }, [loadAnalytics]);
 
+  const activeData =
+    timeView === 'today'
+      ? dailyData
+      : timeView === 'weekly'
+      ? weeklyData
+      : monthlyData;
+
   const currentMetrics = {
-    sales:
-      timeView === 'today'
-        ? dailyData?.total_sales || '0.00'
-        : timeView === 'weekly'
-        ? weeklyData?.total_sales || '0.00'
-        : monthlyData?.total_sales || '0.00',
-    bills:
-      timeView === 'today'
-        ? dailyData?.bill_count || 0
-        : timeView === 'weekly'
-        ? weeklyData?.bill_count || 0
-        : monthlyData?.bill_count || 0,
+    sales: activeData ? activeData.total_sales : null,
+    bills: activeData ? activeData.bill_count : null,
     aov:
       timeView === 'today'
-        ? dailyData?.avg_bill_value || '0.00'
-        : (
-            parseFloat(
-              timeView === 'weekly'
-                ? weeklyData?.total_sales || '0'
-                : monthlyData?.total_sales || '0'
-            ) /
-              Math.max(
-                1,
-                timeView === 'weekly' ? weeklyData?.bill_count || 1 : monthlyData?.bill_count || 1
-              )
-          ).toFixed(2),
-    expenses:
-      timeView === 'today'
-        ? dailyData?.total_expense || '0.00'
-        : timeView === 'weekly'
-        ? weeklyData?.total_expense || '0.00'
-        : monthlyData?.total_expense || '0.00',
-    netRevenue:
-      timeView === 'today'
-        ? dailyData?.net_revenue || '0.00'
-        : timeView === 'weekly'
-        ? weeklyData?.net_revenue || '0.00'
-        : monthlyData?.net_revenue || '0.00',
+        ? dailyData?.avg_bill_value ?? null
+        : activeData
+        ? (
+            parseFloat(activeData.total_sales || '0') /
+            Math.max(1, activeData.bill_count || 1)
+          ).toFixed(2)
+        : null,
+    expenses: activeData ? activeData.total_expense : null,
+    netRevenue: activeData ? activeData.net_revenue : null,
   };
 
-  const totalSalesVal = parseFloat(currentMetrics.sales) || 0;
+  const totalSalesVal = parseFloat(currentMetrics.sales || '0') || 0;
   const cashVal = parseFloat(dailyData?.payment_breakdown?.cash || '0');
   const cardVal = parseFloat(dailyData?.payment_breakdown?.card || '0');
   const upiVal = parseFloat(dailyData?.payment_breakdown?.upi || '0');
@@ -211,9 +200,13 @@ export const AnalyticsPage: React.FC = () => {
               <TrendingUp className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="text-lg sm:text-2xl font-black text-slate-900 mt-1 font-display">
-            ₹{parseFloat(currentMetrics.sales).toFixed(2)}
-          </div>
+          {isLoading && currentMetrics.sales === null ? (
+            <div className="h-6 sm:h-8 w-24 bg-slate-200/80 rounded-lg animate-pulse mt-1" />
+          ) : (
+            <div className="text-lg sm:text-2xl font-black text-slate-900 mt-1 font-display animate-fade-in">
+              ₹{parseFloat(currentMetrics.sales || '0').toFixed(2)}
+            </div>
+          )}
           <div className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">
             {timeView === 'today' ? "Today's revenue" : 'Total revenue'}
           </div>
@@ -227,9 +220,13 @@ export const AnalyticsPage: React.FC = () => {
               <Receipt className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="text-lg sm:text-2xl font-black text-slate-900 mt-1 font-display">
-            {currentMetrics.bills}
-          </div>
+          {isLoading && currentMetrics.bills === null ? (
+            <div className="h-6 sm:h-8 w-16 bg-slate-200/80 rounded-lg animate-pulse mt-1" />
+          ) : (
+            <div className="text-lg sm:text-2xl font-black text-slate-900 mt-1 font-display animate-fade-in">
+              {currentMetrics.bills ?? 0}
+            </div>
+          )}
           <div className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">Completed bills</div>
         </div>
 
@@ -241,9 +238,13 @@ export const AnalyticsPage: React.FC = () => {
               <DollarSign className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div className="text-lg sm:text-2xl font-black text-slate-900 mt-1 font-display">
-            ₹{parseFloat(currentMetrics.aov).toFixed(2)}
-          </div>
+          {isLoading && currentMetrics.aov === null ? (
+            <div className="h-6 sm:h-8 w-20 bg-slate-200/80 rounded-lg animate-pulse mt-1" />
+          ) : (
+            <div className="text-lg sm:text-2xl font-black text-slate-900 mt-1 font-display animate-fade-in">
+              ₹{parseFloat(currentMetrics.aov || '0').toFixed(2)}
+            </div>
+          )}
           <div className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5">Per customer check</div>
         </div>
 
@@ -255,15 +256,23 @@ export const AnalyticsPage: React.FC = () => {
               <Wallet className="w-3.5 h-3.5" />
             </div>
           </div>
-          <div
-            className={`text-lg sm:text-2xl font-black mt-1 font-display ${
-              parseFloat(currentMetrics.netRevenue) >= 0 ? 'text-forest-700' : 'text-rose-600'
-            }`}
-          >
-            ₹{parseFloat(currentMetrics.netRevenue).toFixed(2)}
-          </div>
+          {isLoading && currentMetrics.netRevenue === null ? (
+            <div className="h-6 sm:h-8 w-24 bg-slate-200/80 rounded-lg animate-pulse mt-1" />
+          ) : (
+            <div
+              className={`text-lg sm:text-2xl font-black mt-1 font-display animate-fade-in ${
+                parseFloat(currentMetrics.netRevenue || '0') >= 0 ? 'text-forest-700' : 'text-rose-600'
+              }`}
+            >
+              ₹{parseFloat(currentMetrics.netRevenue || '0').toFixed(2)}
+            </div>
+          )}
           <div className="text-[10px] sm:text-[11px] text-slate-400 mt-0.5 truncate">
-            Expenses: ₹{parseFloat(currentMetrics.expenses).toFixed(2)}
+            {isLoading && currentMetrics.expenses === null ? (
+              <span className="inline-block w-20 h-2.5 bg-slate-100 rounded animate-pulse" />
+            ) : (
+              `Expenses: ₹${parseFloat(currentMetrics.expenses || '0').toFixed(2)}`
+            )}
           </div>
         </div>
       </div>

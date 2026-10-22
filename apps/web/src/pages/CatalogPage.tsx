@@ -520,9 +520,43 @@ export const CatalogPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {filteredProducts.map((prod) => (
-                    <tr key={prod.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3 px-5 flex items-center gap-3">
+                  {isLoading ? (
+                    Array.from({ length: 6 }).map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="py-3 px-5 flex items-center gap-3">
+                          <div className="w-12 h-12 bg-slate-200 rounded-2xl flex-shrink-0" />
+                          <div className="space-y-1.5 flex-1">
+                            <div className="h-4 w-32 bg-slate-200 rounded-md" />
+                            <div className="h-3 w-48 bg-slate-100 rounded-md" />
+                          </div>
+                        </td>
+                        <td className="py-3 px-5">
+                          <div className="h-5 w-16 bg-slate-200 rounded-xl" />
+                        </td>
+                        <td className="py-3 px-5 text-right">
+                          <div className="h-5 w-14 bg-slate-200 rounded-md ml-auto" />
+                        </td>
+                        <td className="py-3 px-5 text-center">
+                          <div className="h-6 w-12 bg-slate-200 rounded-full mx-auto" />
+                        </td>
+                        <td className="py-3 px-5 text-center">
+                          <div className="h-7 w-28 bg-slate-200 rounded-xl mx-auto" />
+                        </td>
+                        <td className="py-3 px-5 text-right">
+                          <div className="h-7 w-14 bg-slate-200 rounded-xl ml-auto" />
+                        </td>
+                      </tr>
+                    ))
+                  ) : filteredProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-slate-400">
+                        No products found matching criteria.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredProducts.map((prod) => (
+                      <tr key={prod.id} className="hover:bg-slate-50/70 transition-colors">
+                        <td className="py-3 px-5 flex items-center gap-3">
                         <div
                           onClick={() => openEditProduct(prod)}
                           className="relative group/thumb cursor-pointer flex-shrink-0"
@@ -690,7 +724,8 @@ export const CatalogPage: React.FC = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                )}
                 </tbody>
               </table>
             </div>
@@ -723,7 +758,11 @@ export const CatalogPage: React.FC = () => {
                     </td>
                     <td className="py-3.5 px-5 text-center font-mono">{cat.display_order}</td>
                     <td className="py-3.5 px-5 text-center font-bold text-maroon-700 font-display">
-                      {cat.product_count || 0}
+                      {isLoading ? (
+                        <span className="w-6 h-4 bg-slate-200 rounded inline-block animate-pulse" />
+                      ) : (
+                        cat.product_count ?? 0
+                      )}
                     </td>
                     <td className="py-3.5 px-5 text-center">
                       <button

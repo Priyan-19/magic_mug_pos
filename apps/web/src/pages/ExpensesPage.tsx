@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   DollarSign,
   Plus,
@@ -13,13 +13,25 @@ import { expenseService } from '../services/cafeServices';
 import { useToast } from '../context/ToastContext';
 import { formatDateOnly } from '../utils/formatDate';
 
+const CACHED_EXPENSE_KEY = 'magic_mug_cached_expense_total';
+
 export const ExpensesPage: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [totalAmount, setTotalAmount] = useState<string>('0.00');
+  const [totalAmount, setTotalAmount] = useState<string | null>(() => {
+    try {
+      if (typeof window !== 'undefined') {
+        return sessionStorage.getItem(CACHED_EXPENSE_KEY);
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  });
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const activeRequestIdRef = useRef<number>(0);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -45,19 +57,34 @@ export const ExpensesPage: React.FC = () => {
   ];
 
   const fetchExpenses = useCallback(async () => {
+    const requestId = ++activeRequestIdRef.current;
     try {
       setIsLoading(true);
+      const isUnfiltered = !startDate && !endDate && !categoryFilter;
       const res = await expenseService.listExpenses({
         start_date: startDate || undefined,
         end_date: endDate || undefined,
         category: categoryFilter || undefined,
       });
+
+      // Discard out-of-order stale responses
+      if (requestId !== activeRequestIdRef.current) return;
+
       setExpenses(res.items);
       setTotalAmount(res.total_amount);
+
+      if (isUnfiltered && typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem(CACHED_EXPENSE_KEY, res.total_amount);
+        } catch {}
+      }
     } catch (err: any) {
+      if (requestId !== activeRequestIdRef.current) return;
       showError('Error Loading Expenses', err.message || 'Failed to fetch expenses');
     } finally {
-      setIsLoading(false);
+      if (requestId === activeRequestIdRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [startDate, endDate, categoryFilter, showError]);
 
@@ -128,11 +155,19 @@ export const ExpensesPage: React.FC = () => {
           <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">
             Total Logged Expenses
           </div>
-          <div className="text-xl sm:text-3xl font-black font-display text-rose-600 mt-0.5 sm:mt-1">
-            ₹{parseFloat(totalAmount).toFixed(2)}
-          </div>
+          {isLoading && totalAmount === null ? (
+            <div className="h-7 sm:h-9 w-28 sm:w-36 bg-slate-200/80 rounded-xl animate-pulse mt-1" />
+          ) : (
+            <div className="text-xl sm:text-3xl font-black font-display text-rose-600 mt-0.5 sm:mt-1 animate-fade-in">
+              ₹{parseFloat(totalAmount ?? '0').toFixed(2)}
+            </div>
+          )}
           <div className="text-[10px] sm:text-xs text-slate-400 font-medium mt-0.5">
-            {expenses.length} entries deducted from gross revenue
+            {isLoading && totalAmount === null ? (
+              <span className="inline-block w-28 h-3 bg-slate-100 rounded animate-pulse" />
+            ) : (
+              `${expenses.length} entries deducted from gross revenue`
+            )}
           </div>
         </div>
         <div className="p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-rose-50 text-rose-600 flex-shrink-0">
