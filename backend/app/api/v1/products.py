@@ -1,8 +1,11 @@
+import io
+import base64
 from typing import List, Optional
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
+from PIL import Image
 
 from app.core.database import get_db
 from app.models.product import Product
@@ -12,6 +15,31 @@ from app.schemas.product import ProductCreate, ProductUpdate, ProductResponse
 from app.services.auth_service import get_current_user, require_role
 
 router = APIRouter(prefix="/products", tags=["Products"])
+
+
+def optimize_image_payload(image_url: Optional[str]) -> Optional[str]:
+    """Ensures base64 images never exceed 400x400 WebP (max ~25 KB) in database."""
+    if not image_url or not isinstance(image_url, str):
+        return None
+    raw = image_url.strip()
+    if not raw.startswith("data:image/") or len(raw) < 40000:
+        return raw if raw else None
+    try:
+        header, encoded = raw.split(",", 1)
+        img_bytes = base64.b64decode(encoded)
+        img = Image.open(io.BytesIO(img_bytes))
+        if img.mode in ("RGBA", "LA", "P"):
+            img = img.convert("RGBA")
+            bg = Image.new("RGBA", img.size, (255, 255, 255))
+            img = Image.alpha_composite(bg, img).convert("RGB")
+        elif img.mode != "RGB":
+            img = img.convert("RGB")
+        img.thumbnail((400, 400), Image.Resampling.LANCZOS)
+        out = io.BytesIO()
+        img.save(out, format="WEBP", quality=75, method=6)
+        return f"data:image/webp;base64,{base64.b64encode(out.getvalue()).decode('ascii')}"
+    except Exception:
+        return raw
 
 
 @router.get("", response_model=List[ProductResponse])
@@ -93,7 +121,7 @@ async def create_product(
         name=payload.name.strip(),
         description=payload.description,
         selling_price=payload.selling_price,
-        image_url=payload.image_url.strip() if payload.image_url else None,
+        image_url=optimize_image_payload(payload.image_url),
         is_active=payload.is_active,
         track_stock=payload.track_stock,
         stock_quantity=payload.stock_quantity if payload.track_stock else 0
@@ -139,7 +167,7 @@ async def update_product(
     if payload.selling_price is not None:
         product.selling_price = payload.selling_price
     if payload.image_url is not None:
-        product.image_url = payload.image_url.strip() if payload.image_url.strip() else None
+        product.image_url = optimize_image_payload(payload.image_url)
     if payload.is_active is not None:
         product.is_active = payload.is_active
     if payload.track_stock is not None:

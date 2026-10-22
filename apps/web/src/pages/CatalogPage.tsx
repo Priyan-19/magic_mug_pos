@@ -143,7 +143,53 @@ export const CatalogPage: React.FC = () => {
     }
   };
 
-  const handleImageFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const compressImageFile = (file: File, maxDim = 400, quality = 0.75): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            resolve(event.target?.result as string);
+            return;
+          }
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+          try {
+            const webp = canvas.toDataURL('image/webp', quality);
+            if (webp.startsWith('data:image/webp')) {
+              resolve(webp);
+              return;
+            }
+          } catch {
+            // fallback to jpeg
+          }
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleImageFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -152,23 +198,14 @@ export const CatalogPage: React.FC = () => {
       return;
     }
 
-    if (file.size > 2.5 * 1024 * 1024) {
-      showError('File Too Large', 'Please select an image smaller than 2.5MB');
-      return;
+    try {
+      // Automatically compress and resize to max 400x400 (tiny 15-25 KB payload)
+      const compressedDataUrl = await compressImageFile(file, 400, 0.75);
+      setProdImageUrl(compressedDataUrl);
+      showSuccess('Image Uploaded', 'Dish photo auto-compressed for lightning fast loading');
+    } catch {
+      showError('Upload Error', 'Failed to process image file');
     }
-
-    const reader = new FileReader();
-    reader.onload = (uploadEvent) => {
-      const result = uploadEvent.target?.result as string;
-      if (result) {
-        setProdImageUrl(result);
-        showSuccess('Image Uploaded', 'Dish photo loaded successfully');
-      }
-    };
-    reader.onerror = () => {
-      showError('Upload Error', 'Failed to read image file');
-    };
-    reader.readAsDataURL(file);
   };
 
   const openCreateProduct = () => {
