@@ -62,18 +62,10 @@ async def list_bills(
 
     total_pages = (total + limit - 1) // limit if total > 0 else 1
 
-    # Fetch creator names in bulk if needed
-    creator_ids = {b.created_by for b in bills}
-    creator_map = {}
-    if creator_ids:
-        u_stmt = select(User).where(User.id.in_(creator_ids))
-        u_res = await db.execute(u_stmt)
-        creator_map = {u.id: u.full_name for u in u_res.scalars().all()}
-
     items = []
     for b in bills:
         item_resp = BillResponse.model_validate(b)
-        item_resp.creator_name = creator_map.get(b.created_by, "Unknown")
+        item_resp.creator_name = b.creator.full_name if b.creator else "Unknown"
         items.append(item_resp)
 
     return BillListResponse(

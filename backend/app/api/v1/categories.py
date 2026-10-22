@@ -4,6 +4,7 @@ from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.cache import catalog_cache
 from app.models.category import Category
 from app.models.product import Product
 from app.models.user import User
@@ -19,6 +20,11 @@ async def list_categories(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    cache_key = f"categories:{include_inactive}"
+    cached = catalog_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     stmt = select(Category)
     if not include_inactive:
         stmt = stmt.where(Category.is_active == True)
@@ -42,6 +48,7 @@ async def list_categories(
         cat_resp.product_count = count_map.get(cat.id, 0)
         response_list.append(cat_resp)
 
+    catalog_cache.set(cache_key, response_list)
     return response_list
 
 
@@ -69,6 +76,9 @@ async def create_category(
     db.add(category)
     await db.commit()
     await db.refresh(category)
+
+    catalog_cache.clear_prefix("categories")
+    catalog_cache.clear_prefix("products")
 
     return CategoryResponse.model_validate(category)
 
@@ -108,6 +118,9 @@ async def update_category(
 
     await db.commit()
     await db.refresh(category)
+
+    catalog_cache.clear_prefix("categories")
+    catalog_cache.clear_prefix("products")
 
     return CategoryResponse.model_validate(category)
 
@@ -149,4 +162,7 @@ async def delete_category(
 
     await db.delete(category)
     await db.commit()
+
+    catalog_cache.clear_prefix("categories")
+    catalog_cache.clear_prefix("products")
     return {"success": True, "message": f"Category '{category_name}' deleted permanently"}

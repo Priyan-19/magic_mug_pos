@@ -49,13 +49,9 @@ class AnalyticsService:
         start_dt, end_dt = get_date_bounds_utc(target_date)
         tz = get_tz()
 
-        # 1. Total sales and bills count
-        sales_stmt = (
-            select(
-                func.coalesce(func.sum(Bill.total_amount), Decimal("0.00")),
-                func.count(Bill.id),
-                func.coalesce(func.avg(Bill.total_amount), Decimal("0.00"))
-            )
+        # 1. Fetch daily bills in a single pass for sales, hourly breakdown, and payment distribution
+        daily_bills_stmt = (
+            select(Bill.bill_date, Bill.total_amount, Bill.payment_mode)
             .where(
                 and_(
                     Bill.status == "CONFIRMED",
@@ -64,8 +60,25 @@ class AnalyticsService:
                 )
             )
         )
-        sales_res = await db.execute(sales_stmt)
-        total_sales, bill_count, avg_bill_value = sales_res.first() or (Decimal("0.00"), 0, Decimal("0.00"))
+        daily_bills_res = await db.execute(daily_bills_stmt)
+        daily_bills = daily_bills_res.all()
+
+        total_sales = Decimal("0.00")
+        bill_count = len(daily_bills)
+        hours_map = {h: {"sales": Decimal("0.00"), "count": 0} for h in range(0, 24)}
+        pay_dict = {"CASH": Decimal("0.00"), "CARD": Decimal("0.00"), "UPI": Decimal("0.00")}
+
+        for b_date, b_total, b_mode in daily_bills:
+            amt = Decimal(str(b_total))
+            total_sales += amt
+            pay_dict[b_mode] = pay_dict.get(b_mode, Decimal("0.00")) + amt
+            local_b_date = b_date.astimezone(tz) if b_date.tzinfo else b_date.replace(tzinfo=timezone.utc).astimezone(tz)
+            h = local_b_date.hour
+            if h in hours_map:
+                hours_map[h]["sales"] += amt
+                hours_map[h]["count"] += 1
+
+        avg_bill_value = (total_sales / bill_count) if bill_count > 0 else Decimal("0.00")
 
         # 2. Total expenses
         exp_stmt = (
@@ -107,26 +120,6 @@ class AnalyticsService:
             for row in top_res.all()
         ]
 
-        # 4. Hourly breakdown (Mapped strictly in Local Timezone)
-        hourly_stmt = (
-            select(Bill.bill_date, Bill.total_amount)
-            .where(
-                and_(
-                    Bill.status == "CONFIRMED",
-                    Bill.bill_date >= start_dt,
-                    Bill.bill_date <= end_dt
-                )
-            )
-        )
-        hourly_res = await db.execute(hourly_stmt)
-        hours_map = {h: {"sales": Decimal("0.00"), "count": 0} for h in range(0, 24)}
-        for b_date, b_total in hourly_res.all():
-            local_b_date = b_date.astimezone(tz) if b_date.tzinfo else b_date.replace(tzinfo=timezone.utc).astimezone(tz)
-            h = local_b_date.hour
-            if h in hours_map:
-                hours_map[h]["sales"] += Decimal(str(b_total))
-                hours_map[h]["count"] += 1
-
         hourly_breakdown = [
             HourlySalesPoint(
                 hour=h,
@@ -137,23 +130,6 @@ class AnalyticsService:
             for h, data in sorted(hours_map.items())
         ]
 
-        # 5. Payment method breakdown
-        pay_stmt = (
-            select(
-                Bill.payment_mode,
-                func.coalesce(func.sum(Bill.total_amount), Decimal("0.00"))
-            )
-            .where(
-                and_(
-                    Bill.status == "CONFIRMED",
-                    Bill.bill_date >= start_dt,
-                    Bill.bill_date <= end_dt
-                )
-            )
-            .group_by(Bill.payment_mode)
-        )
-        pay_res = await db.execute(pay_stmt)
-        pay_dict = {mode: amt for mode, amt in pay_res.all()}
         payment_breakdown = PaymentBreakdown(
             cash=pay_dict.get("CASH", Decimal("0.00")),
             card=pay_dict.get("CARD", Decimal("0.00")),

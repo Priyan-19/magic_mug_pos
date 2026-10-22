@@ -1,7 +1,8 @@
 from datetime import datetime, timezone, date
 from decimal import Decimal
 from typing import List, Optional, Tuple
-from sqlalchemy import select, func, and_, or_, desc
+from sqlalchemy import select, func, and_, or_, desc, case
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import HTTPException, status
 
@@ -9,6 +10,7 @@ from app.models.bill import Bill, BillItem
 from app.models.product import Product
 from app.models.user import User
 from app.schemas.bill import BillCreate, BillVoidRequest
+from app.core.cache import catalog_cache, shift_cache
 
 
 from zoneinfo import ZoneInfo
@@ -151,12 +153,18 @@ class BillingService:
         )
         db.add(bill)
         await db.flush()
+
+        # Invalidate shift cashflow and product stock catalog caches
+        shift_cache.clear()
+        catalog_cache.clear_prefix("products")
+
         return bill
 
     @staticmethod
     async def get_bill_by_id(db: AsyncSession, bill_id: int) -> Optional[Bill]:
         stmt = (
             select(Bill)
+            .options(joinedload(Bill.creator))
             .where(Bill.id == bill_id)
         )
         result = await db.execute(stmt)
@@ -189,33 +197,32 @@ class BillingService:
 
         base_filter = and_(*filters) if filters else True
 
-        # Count total
-        count_stmt = select(func.count(Bill.id)).where(base_filter)
-        total_result = await db.execute(count_stmt)
-        total = total_result.scalar() or 0
-
-        # Aggregate summary stats
-        stat_stmt = (
+        # Optimized Single-Query Summary Aggregation:
+        # Replaces 3 sequential round-trips (count total, confirmed sum/count, void count)
+        # with 1 single conditional aggregation pass
+        summary_stmt = (
             select(
-                func.coalesce(func.sum(Bill.total_amount), Decimal("0.00")),
-                func.count(Bill.id)
+                func.count(Bill.id),
+                func.coalesce(
+                    func.sum(case((Bill.status == "CONFIRMED", Bill.total_amount), else_=Decimal("0.00"))),
+                    Decimal("0.00")
+                ),
+                func.count(case((Bill.status == "CONFIRMED", 1))),
+                func.count(case((Bill.status == "VOID", 1)))
             )
-            .where(and_(base_filter, Bill.status == "CONFIRMED"))
+            .where(base_filter)
         )
-        stat_res = await db.execute(stat_stmt)
-        confirmed_rev, confirmed_cnt = stat_res.first() or (Decimal("0.00"), 0)
-
-        void_stmt = (
-            select(func.count(Bill.id))
-            .where(and_(base_filter, Bill.status == "VOID"))
+        summary_res = await db.execute(summary_stmt)
+        summary_row = summary_res.first()
+        total, confirmed_rev, confirmed_cnt, void_cnt = (
+            summary_row if summary_row else (0, Decimal("0.00"), 0, 0)
         )
-        void_res = await db.execute(void_stmt)
-        void_cnt = void_res.scalar() or 0
 
-        # Query paginated items
+        # Query paginated items with joinedload(Bill.creator) to eliminate N+1 creator user lookups
         offset = (page - 1) * limit
         items_stmt = (
             select(Bill)
+            .options(joinedload(Bill.creator))
             .where(base_filter)
             .order_by(desc(Bill.bill_date))
             .offset(offset)
@@ -258,4 +265,9 @@ class BillingService:
                 prod.stock_quantity += item.quantity
 
         await db.flush()
+
+        # Invalidate shift cashflow and product stock catalog caches
+        shift_cache.clear()
+        catalog_cache.clear_prefix("products")
+
         return bill

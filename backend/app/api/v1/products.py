@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from PIL import Image
 
 from app.core.database import get_db
+from app.core.cache import catalog_cache
 from app.models.product import Product
 from app.models.category import Category
 from app.models.user import User
@@ -50,6 +51,11 @@ async def list_products(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    cache_key = f"products:{category_id}:{active_only}:{search}"
+    cached = catalog_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     stmt = (
         select(Product, Category.name.label("category_name"))
         .outerjoin(Category, Category.id == Product.category_id)
@@ -75,6 +81,7 @@ async def list_products(
         resp.category_name = cat_name
         response_list.append(resp)
 
+    catalog_cache.set(cache_key, response_list)
     return response_list
 
 
@@ -130,6 +137,9 @@ async def create_product(
     await db.commit()
     await db.refresh(product)
 
+    catalog_cache.clear_prefix("products")
+    catalog_cache.clear_prefix("categories")
+
     resp = ProductResponse.model_validate(product)
     resp.category_name = category.name
     return resp
@@ -178,6 +188,9 @@ async def update_product(
     await db.commit()
     await db.refresh(product)
 
+    catalog_cache.clear_prefix("products")
+    catalog_cache.clear_prefix("categories")
+
     cat = await db.get(Category, product.category_id)
     resp = ProductResponse.model_validate(product)
     resp.category_name = cat.name if cat else None
@@ -205,6 +218,8 @@ async def update_product_stock(
 
     await db.commit()
     await db.refresh(product)
+
+    catalog_cache.clear_prefix("products")
 
     cat = await db.get(Category, product.category_id)
     resp = ProductResponse.model_validate(product)
@@ -237,4 +252,7 @@ async def delete_product(
     product_name = product.name
     await db.delete(product)
     await db.commit()
+
+    catalog_cache.clear_prefix("products")
+    catalog_cache.clear_prefix("categories")
     return {"success": True, "message": f"Product '{product_name}' deleted permanently"}

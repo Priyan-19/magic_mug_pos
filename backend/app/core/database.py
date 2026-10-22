@@ -16,6 +16,10 @@ if not is_sqlite:
         "max_overflow": 20,
         "pool_recycle": 300,
         "pool_timeout": 30,
+        "connect_args": {
+            # Required for Supabase PgBouncer transaction pooling
+            "statement_cache_size": 0,
+        },
     })
 
 engine = create_async_engine(
@@ -65,8 +69,13 @@ async def init_db() -> None:
                 await conn.execute(text("ALTER TABLE expenses ADD COLUMN IF NOT EXISTS payment_mode VARCHAR(20) DEFAULT 'CASH';"))
                 await conn.execute(text("ALTER TABLE bills DROP CONSTRAINT IF EXISTS check_bill_payment_mode;"))
                 await conn.execute(text("ALTER TABLE bills ADD CONSTRAINT check_bill_payment_mode CHECK (payment_mode IN ('CASH', 'CARD', 'UPI', 'SPLIT'));"))
+                # Production performance indexes
+                await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_bill_items_bill_id ON bill_items(bill_id);"))
+                await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_bills_status_date ON bills(status, bill_date);"))
+                await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_expenses_payment_shift ON expenses(payment_mode, shift_id);"))
+                await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_expenses_date_shift ON expenses(expense_date, shift_id);"))
             except Exception as e:
-                print(f"[init_db] Column/FK migration check: {e}")
+                print(f"[init_db] Column/FK/Index migration check: {e}")
 
 
     # Ensure initial cafe admin account exists for production authentication (Zero test data)

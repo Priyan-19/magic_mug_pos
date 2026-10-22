@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS bills (
 );
 
 CREATE INDEX IF NOT EXISTS idx_bills_date_status ON bills(bill_date, status);
+CREATE INDEX IF NOT EXISTS idx_bills_status_date ON bills(status, bill_date);
 CREATE INDEX IF NOT EXISTS idx_bills_number ON bills(bill_number);
 CREATE INDEX IF NOT EXISTS idx_bills_shift ON bills(shift_id);
 
@@ -118,6 +119,7 @@ CREATE TABLE IF NOT EXISTS bill_items (
 );
 
 CREATE INDEX IF NOT EXISTS idx_bill_items_product_bill ON bill_items(product_id, bill_id);
+CREATE INDEX IF NOT EXISTS idx_bill_items_bill_id ON bill_items(bill_id);
 
 -- ============================================================================
 -- 7. EXPENSES
@@ -138,6 +140,8 @@ CREATE TABLE IF NOT EXISTS expenses (
 
 CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date);
 CREATE INDEX IF NOT EXISTS idx_expenses_shift ON expenses(shift_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_payment_shift ON expenses(payment_mode, shift_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_date_shift ON expenses(expense_date, shift_id);
 
 -- ============================================================================
 -- 8. AUDIT LOGS

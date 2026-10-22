@@ -3,9 +3,11 @@ from decimal import Decimal
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, and_, or_, desc, func
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.cache import shift_cache
 from app.models.shift import Shift
 from app.models.bill import Bill
 from app.models.expense import Expense
@@ -25,7 +27,7 @@ async def compute_shift_cashflow(db: AsyncSession, shift: Shift) -> ShiftCashflo
     """Computes exact live sales cashflow, drawer balance, and breakdown for a given shift."""
     end_time = shift.closed_at if shift.status == "CLOSED" else datetime.now(timezone.utc)
 
-    # 1. Fetch Confirmed Bills (only necessary columns for fast computation)
+    # 1. Fetch Confirmed & Void Bills in a SINGLE query
     bills_stmt = (
         select(
             Bill.total_amount,
@@ -33,10 +35,11 @@ async def compute_shift_cashflow(db: AsyncSession, shift: Shift) -> ShiftCashflo
             Bill.split_details,
             Bill.cash_tendered,
             Bill.change_given,
+            Bill.status,
         )
         .where(
             and_(
-                Bill.status == "CONFIRMED",
+                Bill.status.in_(["CONFIRMED", "VOID"]),
                 or_(
                     Bill.shift_id == shift.id,
                     and_(Bill.bill_date >= shift.opened_at, Bill.bill_date <= end_time)
@@ -45,30 +48,22 @@ async def compute_shift_cashflow(db: AsyncSession, shift: Shift) -> ShiftCashflo
         )
     )
     bills_res = await db.execute(bills_stmt)
-    bills = bills_res.all()
+    bills_rows = bills_res.all()
 
-    # 2. Fetch Void Bills count
-    void_stmt = (
-        select(func.count(Bill.id))
-        .where(
-            and_(
-                Bill.status == "VOID",
-                or_(
-                    Bill.shift_id == shift.id,
-                    and_(Bill.bill_date >= shift.opened_at, Bill.bill_date <= end_time)
-                )
-            )
-        )
-    )
-    void_count = (await db.execute(void_stmt)).scalar() or 0
-
+    void_count = 0
+    confirmed_count = 0
     cash_sales = Decimal("0.00")
     cash_received_gross = Decimal("0.00")
     change_given_total = Decimal("0.00")
     upi_sales = Decimal("0.00")
     card_sales = Decimal("0.00")
 
-    for b in bills:
+    for b in bills_rows:
+        if b.status == "VOID":
+            void_count += 1
+            continue
+
+        confirmed_count += 1
         amt = Decimal(str(b.total_amount))
         if b.payment_mode == "CASH":
             cash_sales += amt
@@ -97,7 +92,7 @@ async def compute_shift_cashflow(db: AsyncSession, shift: Shift) -> ShiftCashflo
 
     total_sales = cash_sales + upi_sales + card_sales
 
-    # 3. Fetch Cash Expenses (only cash expenses reduce the physical drawer)
+    # 2. Fetch Cash Expenses (only cash expenses reduce the physical drawer)
     exp_stmt = (
         select(func.coalesce(func.sum(Expense.amount), 0))
         .where(
@@ -120,9 +115,8 @@ async def compute_shift_cashflow(db: AsyncSession, shift: Shift) -> ShiftCashflo
     if shift.status == "CLOSED" and shift.closing_cash_actual is not None:
         closing_diff = Decimal(str(shift.closing_cash_actual)) - expected_cash
 
-    # Fetch opener user name
-    user_stmt = select(User.full_name).where(User.id == shift.user_id)
-    opened_by_name = (await db.execute(user_stmt)).scalar() or f"User #{shift.user_id}"
+    # Fetch opener user name without separate query if joined
+    opened_by_name = shift.user.full_name if (hasattr(shift, "user") and shift.user) else f"User #{shift.user_id}"
 
     return ShiftCashflowSummary(
         shift_id=shift.id,
@@ -143,7 +137,7 @@ async def compute_shift_cashflow(db: AsyncSession, shift: Shift) -> ShiftCashflo
         closing_cash_actual=shift.closing_cash_actual,
         closing_difference=closing_diff,
         closing_notes=shift.closing_notes,
-        confirmed_bills_count=len(bills),
+        confirmed_bills_count=confirmed_count,
         void_bills_count=void_count
     )
 
@@ -154,13 +148,25 @@ async def get_current_shift(
     current_user: User = Depends(get_current_user)
 ):
     """Returns the currently active open register shift with live sales cashflow metrics."""
-    stmt = select(Shift).where(Shift.status == "OPEN").order_by(Shift.id.desc())
+    # Check 5s deduplication cache for frequent UI polling
+    cached = shift_cache.get("current_shift")
+    if cached is not None:
+        return cached
+
+    stmt = (
+        select(Shift)
+        .options(joinedload(Shift.user))
+        .where(Shift.status == "OPEN")
+        .order_by(Shift.id.desc())
+    )
     active_shift = (await db.execute(stmt)).scalars().first()
 
     if not active_shift:
         return None
 
-    return await compute_shift_cashflow(db, active_shift)
+    summary = await compute_shift_cashflow(db, active_shift)
+    shift_cache.set("current_shift", summary)
+    return summary
 
 
 @router.post("/open", response_model=ShiftCashflowSummary, status_code=status.HTTP_201_CREATED)
@@ -189,6 +195,7 @@ async def open_shift(
     db.add(shift)
     await db.commit()
     await db.refresh(shift)
+    shift_cache.clear()
 
     return await compute_shift_cashflow(db, shift)
 
@@ -200,7 +207,12 @@ async def close_shift(
     current_user: User = Depends(require_role(["OWNER", "CASHIER"]))
 ):
     """Closes the active shift, compares counted cash to expected cash, and generates EOD summary."""
-    stmt = select(Shift).where(Shift.status == "OPEN").order_by(Shift.id.desc())
+    stmt = (
+        select(Shift)
+        .options(joinedload(Shift.user))
+        .where(Shift.status == "OPEN")
+        .order_by(Shift.id.desc())
+    )
     active_shift = (await db.execute(stmt)).scalars().first()
     if not active_shift:
         raise HTTPException(
@@ -222,6 +234,7 @@ async def close_shift(
 
     await db.commit()
     await db.refresh(active_shift)
+    shift_cache.clear()
 
     return await compute_shift_cashflow(db, active_shift)
 
@@ -233,7 +246,13 @@ async def list_shift_history(
     current_user: User = Depends(get_current_user)
 ):
     """Lists recent closed shift records and EOD reconciliations."""
-    stmt = select(Shift).where(Shift.status == "CLOSED").order_by(desc(Shift.closed_at)).limit(limit)
+    stmt = (
+        select(Shift)
+        .options(joinedload(Shift.user))
+        .where(Shift.status == "CLOSED")
+        .order_by(desc(Shift.closed_at))
+        .limit(limit)
+    )
     shifts = (await db.execute(stmt)).scalars().all()
 
     results = []

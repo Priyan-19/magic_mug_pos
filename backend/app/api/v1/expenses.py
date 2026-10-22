@@ -6,6 +6,7 @@ from sqlalchemy import select, and_, desc, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.cache import shift_cache
 from app.models.expense import Expense
 from app.models.user import User
 from app.schemas.expense import (
@@ -37,12 +38,7 @@ async def list_expenses(
 
     base_filter = and_(*filters) if filters else True
 
-    # Total amount
-    total_stmt = select(func.coalesce(func.sum(Expense.amount), Decimal("0.00"))).where(base_filter)
-    total_res = await db.execute(total_stmt)
-    total_amt = total_res.scalar() or Decimal("0.00")
-
-    # Expenses list
+    # Single-pass query for expenses and creator names
     stmt = (
         select(Expense, User.full_name.label("creator_name"))
         .outerjoin(User, User.id == Expense.created_by)
@@ -52,8 +48,10 @@ async def list_expenses(
     result = await db.execute(stmt)
     rows = result.all()
 
+    total_amt = Decimal("0.00")
     items = []
     for exp, creator_name in rows:
+        total_amt += exp.amount
         exp_resp = ExpenseResponse.model_validate(exp)
         exp_resp.creator_name = creator_name
         items.append(exp_resp)
@@ -88,6 +86,7 @@ async def create_expense(
     db.add(expense)
     await db.commit()
     await db.refresh(expense)
+    shift_cache.clear()
 
     resp = ExpenseResponse.model_validate(expense)
     resp.creator_name = current_user.full_name
@@ -119,6 +118,7 @@ async def update_expense(
 
     await db.commit()
     await db.refresh(expense)
+    shift_cache.clear()
 
     resp = ExpenseResponse.model_validate(expense)
     resp.creator_name = current_user.full_name
@@ -140,4 +140,5 @@ async def delete_expense(
 
     await db.delete(expense)
     await db.commit()
+    shift_cache.clear()
     return {"success": True, "message": "Expense deleted successfully"}
