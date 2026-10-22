@@ -2,7 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiConfig {
   // Production Cloud URL on Render
-  static const String defaultBaseUrl = 'https://magic-mug-api.onrender.com/api/v1';
+  static const String defaultBaseUrl = 'https://magic-mug-api-1y4x.onrender.com/api/v1';
   static const String baseUrlKey = 'magic_mug_api_base_url';
 
   static String baseUrl = defaultBaseUrl;

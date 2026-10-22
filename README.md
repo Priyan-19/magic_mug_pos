@@ -171,14 +171,14 @@ You can deploy the backend using Docker or directly with Python:
      - `DATABASE_URL`: `postgresql+asyncpg://...` (from your PostgreSQL database)
      - `SECRET_KEY`: `your-secure-production-secret-key`
      - `ALLOWED_ORIGINS`: `*`
-  5. Deploy! You will receive your public live URL (e.g., `https://magic-mug-api.onrender.com`).
+  5. Deploy! You will receive your public live URL (e.g., `https://magic-mug-api-1y4x.onrender.com`).
 
 ### 2. Configure Permanent Backend URL in Mobile App
 Once your backend is live, set your cloud domain as the permanent default in `apps/mobile/lib/core/api_config.dart`:
 
 ```dart
 // apps/mobile/lib/core/api_config.dart
-static const String defaultBaseUrl = 'https://magic-mug-api.onrender.com/api/v1';
+static const String defaultBaseUrl = 'https://magic-mug-api-1y4x.onrender.com/api/v1';
 ```
 
 When you build the app, it will connect automatically to your cloud server on boot with zero setup needed by the user.
