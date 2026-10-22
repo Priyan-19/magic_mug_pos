@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Clock, Wallet } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import magicMugLogo from '../assets/logo.png';
-import { shiftService } from '../services/cafeServices';
+import { shiftService, getStoredShift } from '../services/cafeServices';
 import { ShiftCashflowSummary } from '../types';
 import { ShiftModal } from './ShiftModal';
 
@@ -23,7 +23,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
 }) => {
   const { user } = useAuth();
   const [currentDateTime, setCurrentDateTime] = useState(() => new Date());
-  const [currentShift, setCurrentShift] = useState<ShiftCashflowSummary | null>(null);
+  const [currentShift, setCurrentShift] = useState<ShiftCashflowSummary | null>(() => getStoredShift());
+  const [isShiftLoading, setIsShiftLoading] = useState<boolean>(!getStoredShift());
   const [isShiftModalOpen, setIsShiftModalOpen] = useState<boolean>(false);
 
   const fetchShift = async () => {
@@ -32,6 +33,8 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       setCurrentShift(s);
     } catch {
       // Ignore background shift fetch errors
+    } finally {
+      setIsShiftLoading(false);
     }
   };
 
@@ -130,6 +133,11 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
               ₹{parseFloat(currentShift.expected_cash || '0').toFixed(0)}
             </span>
           </button>
+        ) : isShiftLoading && !currentShift ? (
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-2xl bg-slate-100/80 border border-slate-200/90 text-slate-400 text-[11px] sm:text-xs font-semibold animate-pulse">
+            <Wallet className="w-3.5 h-3.5 text-slate-400" />
+            <span className="w-14 sm:w-16 h-3.5 bg-slate-200 rounded-md inline-block" />
+          </div>
         ) : (
           <button
             type="button"
@@ -178,6 +186,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
       <ShiftModal
         isOpen={isShiftModalOpen}
         onClose={() => setIsShiftModalOpen(false)}
+        initialShift={currentShift}
         onShiftChange={(s) => setCurrentShift(s)}
       />
     </header>

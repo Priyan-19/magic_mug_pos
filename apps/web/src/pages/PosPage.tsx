@@ -21,7 +21,7 @@ import {
   Wallet,
 } from 'lucide-react';
 import { Category, Product, Bill, ShiftCashflowSummary } from '../types';
-import { catalogService, billingService, analyticsService, shiftService } from '../services/cafeServices';
+import { catalogService, billingService, analyticsService, shiftService, getStoredShift } from '../services/cafeServices';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { PrintableReceipt } from '../components/PrintableReceipt';
@@ -43,7 +43,8 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
   const [mobileView, setMobileView] = useState<'menu' | 'cart'>('menu');
 
   // Shift & Cash Tender / Split States
-  const [currentShift, setCurrentShift] = useState<ShiftCashflowSummary | null>(null);
+  const [currentShift, setCurrentShift] = useState<ShiftCashflowSummary | null>(() => getStoredShift());
+  const [isShiftLoading, setIsShiftLoading] = useState<boolean>(!getStoredShift());
   const [isShiftModalOpen, setIsShiftModalOpen] = useState<boolean>(false);
   const [cashReceived, setCashReceived] = useState<string>('');
   const [splitCash, setSplitCash] = useState<string>('');
@@ -74,6 +75,8 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
       setCurrentShift(shift);
     } catch {
       // Ignore background shift error
+    } finally {
+      setIsShiftLoading(false);
     }
   }, []);
 
@@ -314,7 +317,7 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
       {/* LEFT CATALOG SECTION (Dual pane on iPad >= 768px) */}
       <div className={`flex-1 h-full overflow-y-auto pr-1 sm:pr-2 space-y-3 sm:space-y-4 md:space-y-4 lg:space-y-6 min-w-0 ${mobileView === 'cart' ? 'hidden md:block' : 'block'}`}>
         {/* Non-blocking Shift Notice if register is closed */}
-        {(!currentShift || currentShift.status !== 'OPEN') && (
+        {!isShiftLoading && (!currentShift || currentShift.status !== 'OPEN') && (
           <div className="p-3 rounded-2xl bg-gradient-to-r from-maroon-50 via-maroon-50/60 to-slate-50 border border-maroon-200/90 flex items-center justify-between gap-3 animate-fade-in shadow-xs">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="p-2 rounded-xl bg-maroon-700 text-white flex-shrink-0 shadow-xs">
@@ -1011,6 +1014,7 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
       <ShiftModal
         isOpen={isShiftModalOpen}
         onClose={() => setIsShiftModalOpen(false)}
+        initialShift={currentShift}
         onShiftChange={(s) => setCurrentShift(s)}
       />
     </div>

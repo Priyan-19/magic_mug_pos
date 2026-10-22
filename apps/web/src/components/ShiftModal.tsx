@@ -20,22 +20,26 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { ShiftCashflowSummary } from '../types';
-import { shiftService } from '../services/cafeServices';
+import { shiftService, getStoredShift } from '../services/cafeServices';
 import { useToast } from '../context/ToastContext';
 
 interface ShiftModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialShift?: ShiftCashflowSummary | null;
   onShiftChange?: (shift: ShiftCashflowSummary | null) => void;
 }
 
 export const ShiftModal: React.FC<ShiftModalProps> = ({
   isOpen,
   onClose,
+  initialShift,
   onShiftChange,
 }) => {
   const [activeTab, setActiveTab] = useState<'cashflow' | 'close'>('cashflow');
-  const [currentShift, setCurrentShift] = useState<ShiftCashflowSummary | null>(null);
+  const [currentShift, setCurrentShift] = useState<ShiftCashflowSummary | null>(
+    () => (initialShift !== undefined ? initialShift : getStoredShift())
+  );
   const [loading, setLoading] = useState<boolean>(false);
 
   // Open Shift Form State
@@ -48,9 +52,20 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
 
   const { success: showSuccess, error: showError } = useToast();
 
+  useEffect(() => {
+    if (initialShift !== undefined) {
+      setCurrentShift(initialShift);
+      if (initialShift?.status === 'OPEN') {
+        setClosingActual(initialShift.expected_cash);
+      }
+    }
+  }, [initialShift]);
+
   const loadCurrentShift = async () => {
     try {
-      setLoading(true);
+      if (!currentShift) {
+        setLoading(true);
+      }
       const res = await shiftService.getCurrentShift();
       setCurrentShift(res);
       if (onShiftChange) onShiftChange(res);
@@ -153,6 +168,10 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-forest-50 text-forest-700 border border-forest-200">
                     Register Open
                   </span>
+                ) : loading && !currentShift ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-400 border border-slate-200 animate-pulse">
+                    Checking...
+                  </span>
                 ) : (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 border border-slate-200">
                     Closed / Not Started
@@ -201,8 +220,15 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
 
         {/* Content Body */}
         <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0 space-y-4">
-          {/* CASE 1: NO SHIFT OPEN -> SHOW DAY OPENING PROMPT */}
-          {!currentShift || currentShift.status !== 'OPEN' ? (
+          {/* CASE 0: LOADING STATE (PREVENTS FLASH OF CLOSED FORM) */}
+          {loading && !currentShift ? (
+            <div className="py-16 flex flex-col items-center justify-center text-center space-y-3">
+              <div className="w-9 h-9 border-3 border-maroon-700/20 border-t-maroon-700 rounded-full animate-spin" />
+              <div className="text-xs font-bold text-slate-700">Verifying Register Status...</div>
+              <div className="text-[11px] text-slate-400">Loading live drawer balance and cashflow</div>
+            </div>
+          ) : /* CASE 1: NO SHIFT OPEN -> SHOW DAY OPENING PROMPT */
+          !currentShift || currentShift.status !== 'OPEN' ? (
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-gradient-to-br from-maroon-50 via-white to-slate-50 border border-maroon-100 shadow-xs">
                 <div className="flex items-start gap-3">

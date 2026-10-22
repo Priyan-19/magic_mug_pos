@@ -33,15 +33,39 @@ export const clearCatalogCache = () => {
   catalogCache.clear();
 };
 
+const SESSION_SHIFT_KEY = 'magic_mug_cached_shift';
+
+export const getStoredShift = (): ShiftCashflowSummary | null => {
+  try {
+    if (typeof window === 'undefined') return null;
+    const item = sessionStorage.getItem(SESSION_SHIFT_KEY);
+    return item ? JSON.parse(item) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setStoredShift = (shift: ShiftCashflowSummary | null) => {
+  try {
+    if (typeof window === 'undefined') return;
+    if (shift) {
+      sessionStorage.setItem(SESSION_SHIFT_KEY, JSON.stringify(shift));
+    } else {
+      sessionStorage.removeItem(SESSION_SHIFT_KEY);
+    }
+  } catch {}
+};
+
 let currentShiftPromise: Promise<ShiftCashflowSummary | null> | null = null;
 let lastShiftFetchTime = 0;
-let cachedShift: ShiftCashflowSummary | null = null;
+let cachedShift: ShiftCashflowSummary | null = getStoredShift();
 const SHIFT_CACHE_WINDOW = 3000; // 3s deduplication window for concurrent component mounts
 
 export const clearShiftCache = () => {
   cachedShift = null;
   lastShiftFetchTime = 0;
   currentShiftPromise = null;
+  setStoredShift(null);
 };
 
 // Listen to window shift-updated events to invalidate cache
@@ -251,6 +275,7 @@ export const shiftService = {
       .get<ShiftCashflowSummary | null>('/shifts/current')
       .then((data) => {
         cachedShift = data;
+        setStoredShift(data);
         lastShiftFetchTime = Date.now();
         currentShiftPromise = null;
         return data;
@@ -264,11 +289,16 @@ export const shiftService = {
   },
   openShift: async (payload: ShiftOpenRequest) => {
     clearShiftCache();
-    return api.post<ShiftCashflowSummary>('/shifts/open', payload);
+    const res = await api.post<ShiftCashflowSummary>('/shifts/open', payload);
+    cachedShift = res;
+    setStoredShift(res);
+    return res;
   },
   closeShift: async (payload: ShiftCloseRequest) => {
     clearShiftCache();
-    return api.post<ShiftCashflowSummary>('/shifts/close', payload);
+    const res = await api.post<ShiftCashflowSummary>('/shifts/close', payload);
+    setStoredShift(null);
+    return res;
   },
   getHistory: (limit = 15) => api.get<ShiftCashflowSummary[]>(`/shifts/history?limit=${limit}`),
 };
