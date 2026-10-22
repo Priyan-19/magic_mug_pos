@@ -21,7 +21,15 @@ import {
   Wallet,
 } from 'lucide-react';
 import { Category, Product, Bill, ShiftCashflowSummary } from '../types';
-import { catalogService, billingService, analyticsService, shiftService, getStoredShift } from '../services/cafeServices';
+import {
+  catalogService,
+  billingService,
+  analyticsService,
+  shiftService,
+  getStoredShift,
+  getStoredCategories,
+  getStoredProducts
+} from '../services/cafeServices';
 import { useCart } from '../context/CartContext';
 import { useToast } from '../context/ToastContext';
 import { PrintableReceipt } from '../components/PrintableReceipt';
@@ -33,11 +41,11 @@ interface PosPageProps {
 }
 
 export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>(() => getStoredCategories());
+  const [products, setProducts] = useState<Product[]>(() => getStoredProducts());
   const [popularProductIds, setPopularProductIds] = useState<Set<number>>(new Set());
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(() => getStoredProducts().length === 0);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [confirmedBill, setConfirmedBill] = useState<Bill | null>(null);
   const [mobileView, setMobileView] = useState<'menu' | 'cart'>('menu');
@@ -122,23 +130,28 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
 
   const loadCatalog = useCallback(async () => {
     try {
-      setIsLoading(true);
-      const [cats, prods, bestSellers] = await Promise.all([
+      if (products.length === 0) {
+        setIsLoading(true);
+      }
+      const [cats, prods] = await Promise.all([
         catalogService.getCategories(false),
         catalogService.getProducts({ active_only: true }),
-        analyticsService.getBestSellers({ limit: 1 }).catch(() => []),
       ]);
       setCategories(cats);
       setProducts(prods);
-      if (bestSellers && bestSellers.length > 0) {
-        setPopularProductIds(new Set(bestSellers.map((b) => b.product_id)));
-      }
+
+      // Best sellers loaded asynchronously in background without blocking product rendering
+      analyticsService.getBestSellers({ limit: 1 }).then((bestSellers) => {
+        if (bestSellers && bestSellers.length > 0) {
+          setPopularProductIds(new Set(bestSellers.map((b) => b.product_id)));
+        }
+      }).catch(() => {});
     } catch (err: any) {
       showError('Catalog Error', err.message || 'Failed to load catalog');
     } finally {
       setIsLoading(false);
     }
-  }, [showError]);
+  }, [products.length, showError]);
 
   useEffect(() => {
     loadCatalog();

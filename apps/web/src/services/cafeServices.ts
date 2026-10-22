@@ -31,9 +31,20 @@ const catalogCache = new Map<string, CacheEntry<any>>();
 
 export const clearCatalogCache = () => {
   catalogCache.clear();
+  try {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('magic_mug_cached_categories');
+      sessionStorage.removeItem('magic_mug_cached_products');
+    }
+  } catch {}
 };
 
 const SESSION_SHIFT_KEY = 'magic_mug_cached_shift';
+const SESSION_CATEGORIES_KEY = 'magic_mug_cached_categories';
+const SESSION_PRODUCTS_KEY = 'magic_mug_cached_products';
+const SESSION_ANALYTICS_KEY = 'magic_mug_cached_analytics';
+const SESSION_BILLS_KEY = 'magic_mug_cached_bills';
+const SESSION_EXPENSES_KEY = 'magic_mug_cached_expenses';
 
 export const getStoredShift = (): ShiftCashflowSummary | null => {
   try {
@@ -53,6 +64,94 @@ export const setStoredShift = (shift: ShiftCashflowSummary | null) => {
     } else {
       sessionStorage.removeItem(SESSION_SHIFT_KEY);
     }
+  } catch {}
+};
+
+export const getStoredCategories = (): Category[] => {
+  try {
+    if (typeof window === 'undefined') return [];
+    const item = sessionStorage.getItem(SESSION_CATEGORIES_KEY);
+    return item ? JSON.parse(item) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const setStoredCategories = (cats: Category[]) => {
+  try {
+    if (typeof window === 'undefined') return;
+    sessionStorage.setItem(SESSION_CATEGORIES_KEY, JSON.stringify(cats));
+  } catch {}
+};
+
+export const getStoredProducts = (): Product[] => {
+  try {
+    if (typeof window === 'undefined') return [];
+    const item = sessionStorage.getItem(SESSION_PRODUCTS_KEY);
+    return item ? JSON.parse(item) : [];
+  } catch {
+    return [];
+  }
+};
+
+export const setStoredProducts = (prods: Product[]) => {
+  try {
+    if (typeof window === 'undefined') return;
+    sessionStorage.setItem(SESSION_PRODUCTS_KEY, JSON.stringify(prods));
+  } catch {}
+};
+
+export const getStoredAnalytics = (): DailyAnalytics | null => {
+  try {
+    if (typeof window === 'undefined') return null;
+    const item = sessionStorage.getItem(SESSION_ANALYTICS_KEY);
+    return item ? JSON.parse(item) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setStoredAnalytics = (data: DailyAnalytics | null) => {
+  try {
+    if (typeof window === 'undefined') return;
+    if (data) sessionStorage.setItem(SESSION_ANALYTICS_KEY, JSON.stringify(data));
+    else sessionStorage.removeItem(SESSION_ANALYTICS_KEY);
+  } catch {}
+};
+
+export const getStoredBills = (): BillListResponse | null => {
+  try {
+    if (typeof window === 'undefined') return null;
+    const item = sessionStorage.getItem(SESSION_BILLS_KEY);
+    return item ? JSON.parse(item) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setStoredBills = (data: BillListResponse | null) => {
+  try {
+    if (typeof window === 'undefined') return;
+    if (data) sessionStorage.setItem(SESSION_BILLS_KEY, JSON.stringify(data));
+    else sessionStorage.removeItem(SESSION_BILLS_KEY);
+  } catch {}
+};
+
+export const getStoredExpenses = (): ExpenseListResponse | null => {
+  try {
+    if (typeof window === 'undefined') return null;
+    const item = sessionStorage.getItem(SESSION_EXPENSES_KEY);
+    return item ? JSON.parse(item) : null;
+  } catch {
+    return null;
+  }
+};
+
+export const setStoredExpenses = (data: ExpenseListResponse | null) => {
+  try {
+    if (typeof window === 'undefined') return;
+    if (data) sessionStorage.setItem(SESSION_EXPENSES_KEY, JSON.stringify(data));
+    else sessionStorage.removeItem(SESSION_EXPENSES_KEY);
   } catch {}
 };
 
@@ -90,6 +189,9 @@ export const catalogService = {
     }
     const data = await api.get<Category[]>(`/categories?include_inactive=${includeInactive}`);
     catalogCache.set(key, { data, timestamp: Date.now() });
+    if (!includeInactive) {
+      setStoredCategories(data);
+    }
     return data;
   },
   createCategory: async (payload: { name: string; description?: string; display_order?: number; is_active?: boolean }) => {
@@ -126,6 +228,9 @@ export const catalogService = {
     const data = await api.get<Product[]>(`/products?${q.toString()}`);
     if (!params?.search) {
       catalogCache.set(key, { data, timestamp: Date.now() });
+      if (!params?.category_id && params?.active_only !== false) {
+        setStoredProducts(data);
+      }
     }
     return data;
   },
@@ -172,10 +277,12 @@ export const billingService = {
     // Invalidate shift cache and catalog (to reflect deducted stock)
     clearShiftCache();
     clearCatalogCache();
+    setStoredBills(null);
+    setStoredAnalytics(null);
     return bill;
   },
 
-  listBills: (params?: {
+  listBills: async (params?: {
     page?: number;
     limit?: number;
     search?: string;
@@ -192,7 +299,11 @@ export const billingService = {
     if (params?.payment_mode) q.append('payment_mode', params.payment_mode);
     if (params?.start_date) q.append('start_date', params.start_date);
     if (params?.end_date) q.append('end_date', params.end_date);
-    return api.get<BillListResponse>(`/bills?${q.toString()}`);
+    const data = await api.get<BillListResponse>(`/bills?${q.toString()}`);
+    if (!params?.search && !params?.status && !params?.start_date && (!params?.page || params.page === 1)) {
+      setStoredBills(data);
+    }
+    return data;
   },
 
   getBillDetail: (id: number) => api.get<Bill>(`/bills/${id}`),
@@ -200,39 +311,55 @@ export const billingService = {
   voidBill: async (id: number, reason: string) => {
     const result = await api.post<Bill>(`/bills/${id}/void`, { reason });
     clearShiftCache();
+    setStoredBills(null);
+    setStoredAnalytics(null);
     return result;
   },
 };
 
 export const expenseService = {
-  listExpenses: (params?: { start_date?: string; end_date?: string; category?: string }) => {
+  listExpenses: async (params?: { start_date?: string; end_date?: string; category?: string }) => {
     const q = new URLSearchParams();
     if (params?.start_date) q.append('start_date', params.start_date);
     if (params?.end_date) q.append('end_date', params.end_date);
     if (params?.category) q.append('category', params.category);
-    return api.get<ExpenseListResponse>(`/expenses?${q.toString()}`);
+    const data = await api.get<ExpenseListResponse>(`/expenses?${q.toString()}`);
+    if (!params?.start_date && !params?.end_date && !params?.category) {
+      setStoredExpenses(data);
+    }
+    return data;
   },
   createExpense: async (payload: { category: string; description: string; amount: string; expense_date: string }) => {
     const res = await api.post<Expense>('/expenses', payload);
     clearShiftCache();
+    setStoredExpenses(null);
+    setStoredAnalytics(null);
     return res;
   },
   updateExpense: async (id: number, payload: Partial<Expense>) => {
     const res = await api.put<Expense>(`/expenses/${id}`, payload);
     clearShiftCache();
+    setStoredExpenses(null);
+    setStoredAnalytics(null);
     return res;
   },
   deleteExpense: async (id: number) => {
     const res = await api.del<{ success: boolean; message: string }>(`/expenses/${id}`);
     clearShiftCache();
+    setStoredExpenses(null);
+    setStoredAnalytics(null);
     return res;
   },
 };
 
 export const analyticsService = {
-  getDaily: (date?: string) => {
+  getDaily: async (date?: string) => {
     const q = date ? `?date=${date}` : '';
-    return api.get<DailyAnalytics>(`/analytics/daily${q}`);
+    const data = await api.get<DailyAnalytics>(`/analytics/daily${q}`);
+    if (!date) {
+      setStoredAnalytics(data);
+    }
+    return data;
   },
   getWeekly: (startDate?: string) => {
     const q = startDate ? `?start_date=${startDate}` : '';

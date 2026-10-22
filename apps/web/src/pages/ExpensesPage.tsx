@@ -9,16 +9,21 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { Expense } from '../types';
-import { expenseService } from '../services/cafeServices';
+import { expenseService, getStoredExpenses } from '../services/cafeServices';
 import { useToast } from '../context/ToastContext';
 import { formatDateOnly } from '../utils/formatDate';
 
 const CACHED_EXPENSE_KEY = 'magic_mug_cached_expense_total';
 
 export const ExpensesPage: React.FC = () => {
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
+    const stored = getStoredExpenses();
+    return stored ? stored.items : [];
+  });
   const [totalAmount, setTotalAmount] = useState<string | null>(() => {
     try {
+      const stored = getStoredExpenses();
+      if (stored) return String(stored.total_amount);
       if (typeof window !== 'undefined') {
         return sessionStorage.getItem(CACHED_EXPENSE_KEY);
       }
@@ -30,7 +35,7 @@ export const ExpensesPage: React.FC = () => {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [categoryFilter, setCategoryFilter] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(() => !getStoredExpenses());
   const activeRequestIdRef = useRef<number>(0);
 
   // Modal State
@@ -59,7 +64,9 @@ export const ExpensesPage: React.FC = () => {
   const fetchExpenses = useCallback(async () => {
     const requestId = ++activeRequestIdRef.current;
     try {
-      setIsLoading(true);
+      if (expenses.length === 0) {
+        setIsLoading(true);
+      }
       const isUnfiltered = !startDate && !endDate && !categoryFilter;
       const res = await expenseService.listExpenses({
         start_date: startDate || undefined,

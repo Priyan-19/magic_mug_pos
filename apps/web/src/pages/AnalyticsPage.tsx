@@ -17,18 +17,18 @@ import {
   BestSellerItem,
   Product,
 } from '../types';
-import { analyticsService, catalogService } from '../services/cafeServices';
+import { analyticsService, catalogService, getStoredAnalytics } from '../services/cafeServices';
 import { useToast } from '../context/ToastContext';
 import { getProductImage } from '../utils/productImages';
 
 export const AnalyticsPage: React.FC = () => {
   const [timeView, setTimeView] = useState<'today' | 'weekly' | 'monthly'>('today');
-  const [dailyData, setDailyData] = useState<DailyAnalytics | null>(null);
+  const [dailyData, setDailyData] = useState<DailyAnalytics | null>(() => getStoredAnalytics());
   const [weeklyData, setWeeklyData] = useState<WeeklyAnalytics | null>(null);
   const [monthlyData, setMonthlyData] = useState<MonthlyAnalytics | null>(null);
   const [bestSellers, setBestSellers] = useState<BestSellerItem[]>([]);
   const [trackedProducts, setTrackedProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(() => !getStoredAnalytics());
   const activeRequestIdRef = useRef<number>(0);
 
   const { error: showError } = useToast();
@@ -41,7 +41,9 @@ export const AnalyticsPage: React.FC = () => {
   const loadAnalytics = useCallback(async () => {
     const requestId = ++activeRequestIdRef.current;
     try {
-      setIsLoading(true);
+      if (!dailyData && !weeklyData && !monthlyData) {
+        setIsLoading(true);
+      }
       const prodsPromise = catalogService.getProducts().catch(() => []);
 
       if (timeView === 'today') {

@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 import { Bill } from '../types';
-import { billingService } from '../services/cafeServices';
+import { billingService, getStoredBills } from '../services/cafeServices';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { PrintableReceipt } from '../components/PrintableReceipt';
@@ -28,18 +28,36 @@ export const HistoryPage: React.FC = () => {
   const { isOwner } = useAuth();
   const { success: showSuccess, error: showError } = useToast();
 
-  const [bills, setBills] = useState<Bill[]>([]);
-  const [totalCount, setTotalCount] = useState<number>(0);
+  const [bills, setBills] = useState<Bill[]>(() => {
+    const stored = getStoredBills();
+    return stored ? stored.items : [];
+  });
+  const [totalCount, setTotalCount] = useState<number>(() => {
+    const stored = getStoredBills();
+    return stored ? stored.total : 0;
+  });
   const [page, setPage] = useState<number>(1);
-  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalPages, setTotalPages] = useState<number>(() => {
+    const stored = getStoredBills();
+    return stored ? stored.total_pages : 1;
+  });
   const [summary, setSummary] = useState<{
     total_confirmed_revenue: string;
     confirmed_count: number;
     void_count: number;
-  }>({
-    total_confirmed_revenue: '0.00',
-    confirmed_count: 0,
-    void_count: 0,
+  }>(() => {
+    const stored = getStoredBills();
+    return stored
+      ? {
+          total_confirmed_revenue: String(stored.summary.total_confirmed_revenue),
+          confirmed_count: stored.summary.confirmed_count,
+          void_count: stored.summary.void_count,
+        }
+      : {
+          total_confirmed_revenue: '0.00',
+          confirmed_count: 0,
+          void_count: 0,
+        };
   });
 
   const [searchTerm, setSearchTerm] = useState<string>('');
@@ -48,7 +66,7 @@ export const HistoryPage: React.FC = () => {
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [datePreset, setDatePreset] = useState<'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'>('all');
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(() => !getStoredBills());
 
   const toDateStr = (d: Date) => {
     const year = d.getFullYear();
@@ -113,7 +131,9 @@ export const HistoryPage: React.FC = () => {
 
   const fetchBills = useCallback(async () => {
     try {
-      setIsLoading(true);
+      if (bills.length === 0) {
+        setIsLoading(true);
+      }
       const res = await billingService.listBills({
         page,
         limit: 15,

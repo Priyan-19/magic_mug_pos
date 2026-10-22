@@ -16,15 +16,15 @@ import {
   Package,
 } from 'lucide-react';
 import { Category, Product } from '../types';
-import { catalogService } from '../services/cafeServices';
+import { catalogService, getStoredCategories, getStoredProducts } from '../services/cafeServices';
 import { useToast } from '../context/ToastContext';
 import { getProductImage, SUGGESTED_IMAGE_PRESETS } from '../utils/productImages';
 
 export const CatalogPage: React.FC = () => {
   const [activeSubTab, setActiveSubTab] = useState<'products' | 'categories'>('products');
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [categories, setCategories] = useState<Category[]>(() => getStoredCategories());
+  const [products, setProducts] = useState<Product[]>(() => getStoredProducts());
+  const [isLoading, setIsLoading] = useState<boolean>(() => getStoredProducts().length === 0);
 
   // Search & Filters
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>('');
@@ -56,7 +56,9 @@ export const CatalogPage: React.FC = () => {
 
   const loadData = useCallback(async () => {
     try {
-      setIsLoading(true);
+      if (products.length === 0) {
+        setIsLoading(true);
+      }
       const [cats, prods] = await Promise.all([
         catalogService.getCategories(true),
         catalogService.getProducts({ active_only: false }),
@@ -71,7 +73,7 @@ export const CatalogPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [prodCategoryId, showError]);
+  }, [products.length, prodCategoryId, showError]);
 
   useEffect(() => {
     loadData();
