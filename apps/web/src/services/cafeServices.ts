@@ -178,6 +178,10 @@ export const authService = {
   login: (username: string, password: string) =>
     api.post<TokenResponse>('/auth/login', { username, password }),
   getMe: () => api.get<User>('/auth/me'),
+  changePassword: (payload: { current_password: string; new_password: string }) =>
+    api.post<{ success: boolean; message: string }>('/auth/change-password', payload),
+  updateProfile: (payload: { full_name: string; username: string; email: string }) =>
+    api.put<User>('/auth/profile', payload),
 };
 
 export const catalogService = {

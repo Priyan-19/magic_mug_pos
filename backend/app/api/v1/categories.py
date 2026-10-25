@@ -56,7 +56,7 @@ async def list_categories(
 async def create_category(
     payload: CategoryCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["OWNER"]))
+    current_user: User = Depends(require_role(["USER"]))
 ):
     # Check if category with name already exists
     existing_stmt = select(Category).where(Category.name.ilike(payload.name.strip()))
@@ -88,7 +88,7 @@ async def update_category(
     category_id: int,
     payload: CategoryUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["OWNER"]))
+    current_user: User = Depends(require_role(["USER"]))
 ):
     category = await db.get(Category, category_id)
     if not category:
@@ -129,7 +129,7 @@ async def update_category(
 async def delete_category(
     category_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["OWNER"]))
+    current_user: User = Depends(require_role(["USER"]))
 ):
     category = await db.get(Category, category_id)
     if not category:

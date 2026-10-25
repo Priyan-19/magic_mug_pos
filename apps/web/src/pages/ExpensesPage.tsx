@@ -307,7 +307,7 @@ export const ExpensesPage: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3.5 px-5 font-medium text-slate-900">{exp.description}</td>
-                    <td className="py-3.5 px-5 text-slate-500">{exp.creator_name || 'Owner'}</td>
+                    <td className="py-3.5 px-5 text-slate-500">{exp.creator_name || 'User'}</td>
                     <td className="py-3.5 px-5 text-right font-display font-extrabold text-rose-600 text-sm">
                       ₹{parseFloat(exp.amount).toFixed(2)}
                     </td>

@@ -46,6 +46,53 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ToastContext.Provider value={{ showToast, success, error, info, warning }}>
       {children}
+      {/* Toast Notification Container */}
+      <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2.5 max-w-sm w-full pointer-events-none p-2 sm:p-0">
+        {toasts.map((toast) => {
+          const isSuccess = toast.type === 'success';
+          const isError = toast.type === 'error';
+          const isWarning = toast.type === 'warning';
+
+          return (
+            <div
+              key={toast.id}
+              className={`pointer-events-auto rounded-2xl shadow-xl border p-4 flex items-start gap-3 animate-fade-in backdrop-blur-md transition-all ${
+                isSuccess
+                  ? 'bg-emerald-50/95 border-emerald-200 text-emerald-950'
+                  : isError
+                  ? 'bg-rose-50/95 border-rose-200 text-rose-950'
+                  : isWarning
+                  ? 'bg-amber-50/95 border-amber-200 text-amber-950'
+                  : 'bg-slate-900/95 border-slate-700 text-white'
+              }`}
+            >
+              {isSuccess && <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />}
+              {isError && <AlertCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />}
+              {isWarning && <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />}
+              {!isSuccess && !isError && !isWarning && <Info className="w-5 h-5 text-sky-400 flex-shrink-0 mt-0.5" />}
+
+              <div className="flex-1 min-w-0">
+                <div className="text-xs sm:text-sm font-bold leading-tight">
+                  {toast.message}
+                </div>
+                {toast.description && (
+                  <div className="text-[11px] sm:text-xs mt-0.5 opacity-80 leading-relaxed">
+                    {toast.description}
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => removeToast(toast.id)}
+                className="opacity-50 hover:opacity-100 p-0.5 rounded-lg transition-opacity flex-shrink-0 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </ToastContext.Provider>
   );
 };

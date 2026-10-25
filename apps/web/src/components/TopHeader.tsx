@@ -12,6 +12,7 @@ interface TopHeaderProps {
   setSearchTerm: (term: string) => void;
   searchPlaceholder?: string;
   searchInputRef?: React.RefObject<HTMLInputElement>;
+  onOpenSettings?: () => void;
 }
 
 export const TopHeader: React.FC<TopHeaderProps> = ({
@@ -20,6 +21,7 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
   setSearchTerm,
   searchPlaceholder = 'Search menu...',
   searchInputRef,
+  onOpenSettings,
 }) => {
   const { user } = useAuth();
   const [currentDateTime, setCurrentDateTime] = useState(() => new Date());
@@ -167,19 +169,23 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
           </div>
         </div>
 
-        <div className="text-right hidden sm:block">
-          <div className="font-bold text-xs sm:text-sm text-slate-900 leading-tight">
-            {(user?.full_name || 'Magic Mug').replace(/\bcafe\b/gi, '').trim() || 'Magic Mug'}
+        {/* Clickable Profile & Account Settings Trigger */}
+        <button
+          onClick={onOpenSettings}
+          title="Account & Security Settings"
+          className="flex items-center gap-2.5 sm:gap-3 p-1.5 -mr-1.5 rounded-2xl hover:bg-slate-100/80 active:scale-[0.98] transition-all cursor-pointer group text-left"
+        >
+          <div className="text-right hidden sm:block">
+            <div className="font-bold text-xs sm:text-sm text-slate-900 group-hover:text-maroon-700 leading-tight transition-colors">
+              {(user?.full_name || 'Magic Mug').replace(/\bcafe\b/gi, '').trim() || 'Magic Mug'}
+            </div>
           </div>
-          <div className="text-[10px] text-slate-400 font-medium mt-0.5 md:hidden">
-            {dateFormatted} | {timeFormatted}
-          </div>
-        </div>
 
-        {/* Avatar */}
-        <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-maroon-700 to-maroon-900 text-white font-extrabold flex items-center justify-center shadow-sm text-xs sm:text-sm border-2 border-white ring-1 ring-slate-200 flex-shrink-0">
-          {((user?.full_name || 'Magic Mug').replace(/\bcafe\b/gi, '').trim() || 'M').charAt(0).toUpperCase()}
-        </div>
+          {/* Avatar */}
+          <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-br from-maroon-700 to-maroon-900 text-white font-extrabold flex items-center justify-center shadow-sm text-xs sm:text-sm border-2 border-white ring-1 ring-slate-200 group-hover:ring-maroon-700/40 flex-shrink-0 transition-all">
+            {((user?.full_name || 'Magic Mug').replace(/\bcafe\b/gi, '').trim() || 'M').charAt(0).toUpperCase()}
+          </div>
+        </button>
       </div>
 
       {/* Shift Management Modal */}

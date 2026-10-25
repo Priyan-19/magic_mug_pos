@@ -106,7 +106,7 @@ async def void_bill(
     bill_id: int,
     payload: BillVoidRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["OWNER"]))
+    current_user: User = Depends(require_role(["USER"]))
 ):
     bill = await BillingService.void_bill(
         db=db,

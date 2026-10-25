@@ -26,7 +26,7 @@ async def list_expenses(
     end_date: Optional[date] = Query(None, description="End date (YYYY-MM-DD)"),
     category: Optional[str] = Query(None, description="Category filter"),
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["OWNER"]))
+    current_user: User = Depends(require_role(["USER"]))
 ):
     filters = []
     if start_date:
@@ -67,7 +67,7 @@ async def list_expenses(
 async def create_expense(
     payload: ExpenseCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["OWNER"]))
+    current_user: User = Depends(require_role(["USER"]))
 ):
     # Check if an active shift is open to associate the expense
     from app.models.shift import Shift
@@ -98,7 +98,7 @@ async def update_expense(
     expense_id: int,
     payload: ExpenseUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["OWNER"]))
+    current_user: User = Depends(require_role(["USER"]))
 ):
     expense = await db.get(Expense, expense_id)
     if not expense:
@@ -129,7 +129,7 @@ async def update_expense(
 async def delete_expense(
     expense_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["OWNER"]))
+    current_user: User = Depends(require_role(["USER"]))
 ):
     expense = await db.get(Expense, expense_id)
     if not expense:

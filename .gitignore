@@ -57,6 +57,11 @@ coverage.xml
 backend/tests/
 backend/pytest.ini
 backend/app/seed.py
+backend/seed*.py
+backend/test*.py
+*.seed.py
+seed_*.py
+scratch/
 
 # ==========================================
 # Flutter & Mobile (Android & iOS)
@@ -142,3 +147,9 @@ studio_run.log
 # Agents & AI Tooling (Local Only)
 # ==========================================
 .agents/
+.gemini/
+.antigravity/
+.system_generated/
+.tempmediaStorage/
+.user_uploaded/
+*.session.sql

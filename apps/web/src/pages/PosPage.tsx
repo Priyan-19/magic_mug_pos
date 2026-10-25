@@ -340,9 +340,6 @@ export const PosPage: React.FC<PosPageProps> = ({ searchTerm }) => {
                 <div className="font-extrabold text-xs text-maroon-900 leading-tight">
                   Day Register is Not Open
                 </div>
-                <div className="text-[11px] text-maroon-700/80 truncate">
-                  Open shift and enter float to track live drawer cashflow
-                </div>
               </div>
             </div>
             <button

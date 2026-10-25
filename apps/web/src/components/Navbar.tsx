@@ -110,11 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeTab, setActiveTab, onOpenS
                   {user?.full_name || 'Staff User'}
                 </div>
                 <div className="text-[10px] tracking-wider font-semibold uppercase">
-                  {isOwner ? (
-                    <span className="text-amber-400 font-bold">Owner</span>
-                  ) : (
-                    <span className="text-blue-400 font-bold">Cashier</span>
-                  )}
+                  <span className="text-amber-400 font-bold">User</span>
                 </div>
               </div>
 

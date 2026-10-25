@@ -1,11 +1,10 @@
-import React from 'react';
 import {
   LayoutGrid,
   Clock,
   BarChart3,
   UtensilsCrossed,
   DollarSign,
-  Keyboard,
+  Settings,
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -14,13 +13,13 @@ import magicMugLogo from '../assets/logo.png';
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  onOpenShortcuts: () => void;
+  onOpenSettings: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   setActiveTab,
-  onOpenShortcuts,
+  onOpenSettings,
 }) => {
   const { logout } = useAuth();
 
@@ -77,18 +76,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Bottom Utility Actions */}
         <div className="flex flex-col items-center gap-3 w-full px-3">
           <button
-            id="btn-shortcuts-modal"
-            onClick={onOpenShortcuts}
-            title="Keyboard Shortcuts"
-            className="w-11 h-11 rounded-2xl flex items-center justify-center text-slate-400 hover:text-maroon-700 hover:bg-slate-50 transition-colors"
+            id="btn-settings-modal"
+            onClick={onOpenSettings}
+            title="Account & Security Settings"
+            className="w-11 h-11 rounded-2xl flex items-center justify-center text-slate-400 hover:text-maroon-700 hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            <Keyboard className="w-5 h-5 stroke-[1.8]" />
+            <Settings className="w-5 h-5 stroke-[1.8]" />
           </button>
 
           <button
             onClick={logout}
             title="Sign Out"
-            className="w-11 h-11 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+            className="w-11 h-11 rounded-2xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
           >
             <LogOut className="w-5 h-5 stroke-[1.8]" />
           </button>

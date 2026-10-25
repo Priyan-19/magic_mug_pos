@@ -178,9 +178,6 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                   </span>
                 )}
               </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                Track opening cash float, live payment breakdowns, and end-of-day reconciliation
-              </p>
             </div>
           </div>
 
@@ -239,10 +236,6 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                     <h4 className="text-xs font-black uppercase tracking-wider text-maroon-900">
                       Day Register Is Not Opened
                     </h4>
-                    <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                      Start today's register by entering the starting physical cash float in your drawer
-                      (for change and coins). All sales and cash expenses will be tracked automatically.
-                    </p>
                   </div>
                 </div>
               </div>
@@ -337,11 +330,6 @@ export const ShiftModal: React.FC<ShiftModalProps> = ({
                     <div className="text-2xl sm:text-3xl font-mono font-black text-white tracking-tight">
                       ₹{parseFloat(currentShift.expected_cash).toFixed(2)}
                     </div>
-                    <p className="text-[11px] text-maroon-200/80 mt-1 font-medium">
-                      Formula: Opening Float (₹{parseFloat(currentShift.opening_cash).toFixed(2)}) + Cash
-                      Sales (+₹{parseFloat(currentShift.cash_sales).toFixed(2)}) - Cash Expenses (-₹
-                      {parseFloat(currentShift.cash_expenses).toFixed(2)})
-                    </p>
                   </div>
 
                   {/* Cashflow Breakdown Grid (Consistent Palette: White cards + Brand Badges) */}

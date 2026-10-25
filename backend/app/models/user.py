@@ -12,7 +12,7 @@ class User(Base):
     email = Column(String(255), unique=True, nullable=False, index=True)
     password_hash = Column(String(255), nullable=False)
     full_name = Column(String(100), nullable=False)
-    role = Column(String(20), nullable=False)
+    role = Column(String(20), default="USER", nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(
@@ -27,5 +27,5 @@ class User(Base):
     expenses = relationship("Expense", back_populates="creator")
 
     __table_args__ = (
-        CheckConstraint("role IN ('OWNER', 'CASHIER')", name="check_user_role"),
+        CheckConstraint("role = 'USER'", name="check_user_role"),
     )

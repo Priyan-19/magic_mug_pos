@@ -13,13 +13,12 @@ from app.schemas.bill import BillCreate, BillVoidRequest
 from app.core.cache import catalog_cache, shift_cache
 
 
-from zoneinfo import ZoneInfo
-from app.core.config import settings
+from app.core.config import settings, get_app_timezone
 
 class BillingService:
     @staticmethod
     async def generate_bill_number(db: AsyncSession, bill_date: datetime) -> str:
-        tz = ZoneInfo(settings.TIMEZONE)
+        tz = get_app_timezone()
         local_date = bill_date.astimezone(tz) if bill_date.tzinfo else bill_date.replace(tzinfo=timezone.utc).astimezone(tz)
         date_str = local_date.strftime("%Y%m%d")
         prefix = f"MUG-{date_str}-"

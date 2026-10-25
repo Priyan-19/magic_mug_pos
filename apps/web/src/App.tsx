@@ -4,24 +4,40 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { Sidebar } from './components/Sidebar';
 import { TopHeader } from './components/TopHeader';
-import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
+import { AccountSettingsModal } from './components/AccountSettingsModal';
 import { LoginPage } from './pages/LoginPage';
 import { PosPage } from './pages/PosPage';
 import { HistoryPage } from './pages/HistoryPage';
 import { AnalyticsPage } from './pages/AnalyticsPage';
 import { CatalogPage } from './pages/CatalogPage';
 import { ExpensesPage } from './pages/ExpensesPage';
+import magicMugLogo from './assets/logo.png';
 
 const MainLayout: React.FC = () => {
-  const { user } = useAuth();
-  const [isBootAnimationComplete, setIsBootAnimationComplete] = useState<boolean>(false);
+  const { user, isInitializing } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('pos');
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [isShortcutsOpen, setIsShortcutsOpen] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
 
-  // Show the animated 4.5s loading / boot screen
-  if (!isBootAnimationComplete || !user) {
-    return <LoginPage onComplete={() => setIsBootAnimationComplete(true)} />;
+  // If checking existing session on boot, show subtle splash
+  if (isInitializing) {
+    return (
+      <div className="fixed inset-0 w-screen h-screen flex flex-col items-center justify-center bg-[#F4F5F7] select-none">
+        <div className="w-20 h-20 rounded-full bg-white p-2 shadow-lg border-2 border-maroon-700/20 mb-4 animate-pulse">
+          <img
+            src={magicMugLogo}
+            alt="Magic Mug"
+            className="w-full h-full object-contain rounded-full"
+          />
+        </div>
+        <div className="w-8 h-8 border-3 border-maroon-700/20 border-t-maroon-700 rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // If no user is authenticated, render the interactive LoginPage
+  if (!user) {
+    return <LoginPage />;
   }
 
   return (
@@ -30,7 +46,7 @@ const MainLayout: React.FC = () => {
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        onOpenShortcuts={() => setIsShortcutsOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
       {/* Main View Area */}
@@ -44,6 +60,7 @@ const MainLayout: React.FC = () => {
               ? 'Search menu (e.g. Latte, Croissant)...'
               : 'Search Magic Mug...'
           }
+          onOpenSettings={() => setIsSettingsOpen(true)}
         />
 
         <main className="flex-1 min-h-0 pb-16 md:pb-0 relative overflow-hidden">
@@ -65,10 +82,10 @@ const MainLayout: React.FC = () => {
         </main>
       </div>
 
-      {/* Keyboard Shortcuts Guide */}
-      <KeyboardShortcutsModal
-        isOpen={isShortcutsOpen}
-        onClose={() => setIsShortcutsOpen(false)}
+      {/* User Profile & Security Settings Modal */}
+      <AccountSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
       />
     </div>
   );

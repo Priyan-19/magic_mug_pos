@@ -204,7 +204,7 @@ async def open_shift(
 async def close_shift(
     payload: ShiftCloseRequest,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["OWNER", "CASHIER"]))
+    current_user: User = Depends(require_role(["USER"]))
 ):
     """Closes the active shift, compares counted cash to expected cash, and generates EOD summary."""
     stmt = (

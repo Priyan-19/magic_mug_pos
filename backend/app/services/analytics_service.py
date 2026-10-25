@@ -6,7 +6,7 @@ import calendar
 from sqlalchemy import select, func, and_, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.config import settings, get_app_timezone
 from app.models.bill import Bill, BillItem
 from app.models.product import Product
 from app.models.category import Category
@@ -25,8 +25,8 @@ from app.schemas.analytics import (
 )
 
 
-def get_tz() -> ZoneInfo:
-    return ZoneInfo(settings.TIMEZONE)
+def get_tz():
+    return get_app_timezone()
 
 
 def get_date_bounds_utc(target_date: date):

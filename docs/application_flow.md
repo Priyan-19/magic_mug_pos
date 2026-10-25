@@ -64,17 +64,25 @@
       Yes                  No
       /                     \
      v                       v
-Validate Token        Silent Auto-Initialize Terminal Session
-GET /api/v1/auth/me   POST /api/v1/auth/login (admin/secretpassword)
-     |                       |
+Validate Token        Clean Login Screen
+GET /api/v1/auth/me   POST /api/v1/auth/login
+     |                (Single USER role authentication)
 Token Valid?                 |
  /        \                  v
 Yes        No ---------> Store Token in Secure Storage
  |                           |
  v                           v
+Parallel Preload Pipeline (Catalog, Categories, Shift, Assets)
+                             |
+                             v
 Navigate Directly to POS / Terminal Dashboard
-(Zero Cashier Delay - Terminal Ready for Immediate Billing)
+(Zero Cashier Delay - In-Memory Cache Ready for Immediate Billing)
 ```
+
+### 3.1 Single Role Architecture (`USER`)
+- Streamlined permission model using a single, unified `'USER'` role across all terminal operators.
+- Avoids complex multi-tenant or role-switching barriers while retaining full JWT authorization and immutable database audit logging (`audit_logs`).
+- Operators can manage their name, credentials, and settings directly via the **Account Settings** modal (`PUT /api/v1/auth/me`).
 
 ---
 

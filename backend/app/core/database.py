@@ -74,6 +74,11 @@ async def init_db() -> None:
                 await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_bills_status_date ON bills(status, bill_date);"))
                 await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_expenses_payment_shift ON expenses(payment_mode, shift_id);"))
                 await conn.execute(text("CREATE INDEX IF NOT EXISTS idx_expenses_date_shift ON expenses(expense_date, shift_id);"))
+                # Production migration for single USER role in Supabase PostgreSQL
+                await conn.execute(text("ALTER TABLE users DROP CONSTRAINT IF EXISTS check_user_role;"))
+                await conn.execute(text("ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;"))
+                await conn.execute(text("UPDATE users SET role = 'USER' WHERE role != 'USER';"))
+                await conn.execute(text("ALTER TABLE users ADD CONSTRAINT check_user_role CHECK (role = 'USER');"))
             except Exception as e:
                 print(f"[init_db] Column/FK/Index migration check: {e}")
 
@@ -93,21 +98,21 @@ async def init_db() -> None:
                 .values(full_name="Magic Mug")
             )
 
-            stmt = select(User).where(User.username == "admin")
+            stmt = select(User).order_by(User.id.asc())
             result = await session.execute(stmt)
-            admin_user = result.scalars().first()
-            if not admin_user:
+            existing_user = result.scalars().first()
+            if not existing_user:
                 admin_user = User(
                     username="admin",
                     email="admin@magicmug.com",
-                    password_hash=get_password_hash("secretpassword"),
+                    password_hash=get_password_hash("admin123"),
                     full_name="Magic Mug",
-                    role="OWNER",
+                    role="USER",
                     is_active=True,
                 )
                 session.add(admin_user)
-            elif admin_user.full_name != "Magic Mug":
-                admin_user.full_name = "Magic Mug"
+            else:
+                existing_user.role = "USER"
             await session.commit()
         except Exception as e:
             await session.rollback()

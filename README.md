@@ -55,9 +55,10 @@
 | Layer | Technologies |
 | :--- | :--- |
 | **Backend API** | Python 3.12, FastAPI, SQLAlchemy 2.0 (Async), Pydantic v2, Uvicorn |
-| **Database** | PostgreSQL 15 (Docker / Supabase) / SQLite (Fallback for lightweight dev) |
+| **Database** | PostgreSQL 15+ (Local Docker or Supabase Cloud with Session Pooler) |
 | **Web Dashboard** | React 19, TypeScript, Vite, TailwindCSS, Lucide Icons, html2canvas |
 | **Mobile App** | Flutter (Dart), Provider, Dio, FL Chart, Screenshot, Share Plus (iOS 13+ / Android 21+) |
+| **Authentication** | JWT Bearer Authentication, Streamlined Single `USER` Role model |
 | **Containerization** | Docker, Docker Compose, Nginx Alpine |
 
 ---
@@ -98,6 +99,19 @@ docker compose up -d --build
 | **PostgreSQL DB** | `localhost:5432` | `pos_user` / `super_secure_pos_password` |
 
 ---
+
+### ☁️ Using Supabase (Cloud PostgreSQL)
+The backend is fully compatible with **Supabase PostgreSQL**. For production or cloud hosting without managing local Docker database volumes:
+1. In your Supabase Dashboard, go to **Project Settings** → **Database** → **Connection String**.
+2. Select **URI** with **Session Pooler** (recommended for IPv4 networks):
+   ```ini
+   DATABASE_URL="postgresql+asyncpg://postgres.[PROJECT_REF]:[PASSWORD]@aws-0-ap-south-1.pooler.supabase.com:5432/postgres"
+   ```
+3. Initialize the schema using `docker/postgres/init.sql` directly in the Supabase SQL Editor.
+4. Set the `DATABASE_URL` in your backend `.env`.
+
+---
+
 
 ## 💻 Local Development Setup (Manual)
 

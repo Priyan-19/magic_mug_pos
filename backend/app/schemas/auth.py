@@ -34,3 +34,14 @@ class TokenResponse(BaseModel):
 class PasswordChangeRequest(BaseModel):
     current_password: str
     new_password: str = Field(..., min_length=6)
+
+
+class ProfileUpdateRequest(BaseModel):
+    full_name: str = Field(..., min_length=2, max_length=100)
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+
+
+class AuthMessageResponse(BaseModel):
+    success: bool = True
+    message: str

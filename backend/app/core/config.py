@@ -47,3 +47,12 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+
+
+def get_app_timezone():
+    from datetime import timezone, timedelta
+    try:
+        from zoneinfo import ZoneInfo
+        return ZoneInfo(settings.TIMEZONE)
+    except Exception:
+        return timezone(timedelta(hours=5, minutes=30))

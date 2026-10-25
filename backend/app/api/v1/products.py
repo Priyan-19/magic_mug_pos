@@ -113,7 +113,7 @@ async def get_product(
 async def create_product(
     payload: ProductCreate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["OWNER"]))
+    current_user: User = Depends(require_role(["USER"]))
 ):
     # Verify category exists
     category = await db.get(Category, payload.category_id)
@@ -150,7 +150,7 @@ async def update_product(
     product_id: int,
     payload: ProductUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["OWNER"]))
+    current_user: User = Depends(require_role(["USER"]))
 ):
     product = await db.get(Product, product_id)
     if not product:
@@ -202,7 +202,7 @@ async def update_product_stock(
     product_id: int,
     payload: ProductUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["OWNER", "CASHIER"]))
+    current_user: User = Depends(require_role(["USER"]))
 ):
     product = await db.get(Product, product_id)
     if not product:
@@ -231,7 +231,7 @@ async def update_product_stock(
 async def delete_product(
     product_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(require_role(["OWNER"]))
+    current_user: User = Depends(require_role(["USER"]))
 ):
     product = await db.get(Product, product_id)
     if not product:
