@@ -1,7 +1,7 @@
 from typing import Optional, List, Callable
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy import select
+from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.core.security import verify_password, decode_access_token
@@ -17,7 +17,14 @@ class AuthService:
         username: str,
         password: str
     ) -> Optional[User]:
-        stmt = select(User).where(User.username == username)
+        clean_identifier = username.strip().lower()
+        stmt = select(User).where(
+            or_(
+                func.lower(User.username) == clean_identifier,
+                func.lower(User.email) == clean_identifier,
+                func.lower(User.email).like(f"{clean_identifier}@%")
+            )
+        )
         result = await db.execute(stmt)
         user = result.scalars().first()
         if not user:
@@ -36,7 +43,13 @@ class AuthService:
 
     @staticmethod
     async def get_user_by_username(db: AsyncSession, username: str) -> Optional[User]:
-        stmt = select(User).where(User.username == username)
+        clean_identifier = username.strip().lower()
+        stmt = select(User).where(
+            or_(
+                func.lower(User.username) == clean_identifier,
+                func.lower(User.email) == clean_identifier
+            )
+        )
         result = await db.execute(stmt)
         return result.scalars().first()
 

@@ -83,11 +83,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { success: true, user: cleanUser || undefined };
       } catch (err: any) {
         setIsLoading(false);
-        const detailMsg =
+        let detailMsg =
           err?.response?.data?.error?.message ||
           err?.response?.data?.detail ||
           err?.message ||
           'Invalid username or password';
+        if (detailMsg === 'Failed to fetch' || detailMsg?.toLowerCase().includes('failed to fetch')) {
+          detailMsg = 'Unable to connect to backend server. Please verify the backend API is running.';
+        }
         return { success: false, error: detailMsg };
       }
     },
