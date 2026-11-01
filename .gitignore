@@ -1,34 +1,34 @@
+# ==============================================================================
+# Magic Mug POS - Git Ignore Configuration
+# ==============================================================================
+
 # ==========================================
-# Environment Variables & Secrets (Keep .env.example)
+# 1. Environment Variables & Secrets
 # ==========================================
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
 *.env
+*.env.*
 !.env.example
-!backend/.env.example
+!*.env.example
 !apps/web/.env.example
+!apps/web/.env.production
+!backend/.env.example
 
 # ==========================================
-# Node.js / Web Frontend (React + Vite)
+# 2. Database & Persistent Data Volumes
 # ==========================================
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-dist/
-dist-ssr/
-.eslintcache
-.stylelintcache
-.vite/
-.turbo/
-.parcel-cache/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+magic_mug_local.db
+postgres_data/
+db_data/
+magicmug_pgdata/
 
 # ==========================================
-# Python / Backend (FastAPI + Uvicorn)
+# 3. Python & Backend (FastAPI, Uvicorn)
 # ==========================================
 __pycache__/
 *.py[cod]
@@ -52,19 +52,23 @@ coverage.xml
 .ruff_cache/
 
 # ==========================================
-# Test, Seed & Local Development Files
+# 4. Node.js & Web Frontend (React + Vite)
 # ==========================================
-backend/tests/
-backend/pytest.ini
-backend/app/seed.py
-backend/seed*.py
-backend/test*.py
-*.seed.py
-seed_*.py
-scratch/
+node_modules/
+dist/
+dist-ssr/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.eslintcache
+.stylelintcache
+.vite/
+.turbo/
+.parcel-cache/
 
 # ==========================================
-# Flutter & Mobile (Android & iOS)
+# 5. Flutter & Dart (Cross-Platform)
 # ==========================================
 .dart_tool/
 .packages
@@ -73,46 +77,48 @@ scratch/
 .pub-cache/
 .pub/
 build/
+**/build/
 
-# Android Specific
-android/.gradle/
-android/captures/
-android/gradlew
-android/gradlew.bat
-android/local.properties
-android/key.properties
-android/**/build/
+# ==========================================
+# 6. Android (apps/mobile/android & root)
+# ==========================================
+**/.gradle/
+**/android/captures/
+**/local.properties
+**/key.properties
 *.keystore
 *.jks
 *.apk
 *.aab
 
-# iOS Specific
-ios/.symlinks/
-ios/Pods/
-ios/Podfile.lock
-ios/DerivedData/
-ios/Flutter/ephemeral/
-ios/Flutter/Generated.xcconfig
-ios/Flutter/flutter_export_environment.sh
-ios/Flutter/Flutter.framework
-ios/Flutter/Flutter.podspec
+# ==========================================
+# 7. iOS (apps/mobile/ios & root)
+# ==========================================
+**/ios/.symlinks/
+**/ios/Pods/
+**/DerivedData/
+**/Flutter/ephemeral/
+**/Flutter/Generated.xcconfig
+**/Flutter/flutter_export_environment.sh
+**/Flutter/Flutter.framework
+**/Flutter/Flutter.podspec
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcuserdata/
 *.ipa
 
 # ==========================================
-# Database & Persistent Volumes
+# 8. Local Scripts & Test Scratches
 # ==========================================
-*.sqlite3
-*.db
-postgres_data/
-db_data/
-magicmug_pgdata/
+backend/app/seed.py
+backend/seed*.py
+seed_*.py
+*.seed.py
+scratch/
+strix_runs/
 
 # ==========================================
-# Operating System & IDE Files
+# 9. Operating System Files
 # ==========================================
 .DS_Store
 .DS_Store?
@@ -123,7 +129,9 @@ ehthumbs.db
 Thumbs.db
 desktop.ini
 
-# IDEs
+# ==========================================
+# 10. IDEs & Editors
+# ==========================================
 .idea/
 .vscode/*
 !.vscode/settings.json
@@ -135,7 +143,7 @@ desktop.ini
 *.iml
 
 # ==========================================
-# Logs & Temporary Files
+# 11. Logs & Temporary Files
 # ==========================================
 *.log
 logs/
@@ -144,7 +152,7 @@ tmp/
 studio_run.log
 
 # ==========================================
-# Agents & AI Tooling (Local Only)
+# 12. AI & Local Agent Tooling
 # ==========================================
 .agents/
 .gemini/
@@ -152,4 +160,4 @@ studio_run.log
 .system_generated/
 .tempmediaStorage/
 .user_uploaded/
-*.session.sql
+*.session.sql

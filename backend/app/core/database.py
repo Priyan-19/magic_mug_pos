@@ -1,7 +1,11 @@
+import os
+import logging
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import declarative_base
 from app.core.config import settings
+
+logger = logging.getLogger("uvicorn.error")
 
 # Engine configuration (supports PostgreSQL and SQLite)
 is_sqlite = "sqlite" in settings.async_database_url
@@ -80,10 +84,9 @@ async def init_db() -> None:
                 await conn.execute(text("UPDATE users SET role = 'USER' WHERE role != 'USER';"))
                 await conn.execute(text("ALTER TABLE users ADD CONSTRAINT check_user_role CHECK (role = 'USER');"))
             except Exception as e:
-                print(f"[init_db] Column/FK/Index migration check: {e}")
+                logger.warning(f"[init_db] Column/FK/Index migration check: {e}")
 
-
-    # Ensure initial cafe admin account exists for production authentication (Zero test data)
+    # Ensure initial cafe admin account exists only when explicitly configured via environment (Issue 2 fix)
     from sqlalchemy import select
     from app.models.user import User
     from app.core.security import get_password_hash
@@ -102,19 +105,24 @@ async def init_db() -> None:
             result = await session.execute(stmt)
             existing_user = result.scalars().first()
             if not existing_user:
-                admin_user = User(
-                    username="admin",
-                    email="admin@magicmug.com",
-                    password_hash=get_password_hash("admin123"),
-                    full_name="Magic Mug",
-                    role="USER",
-                    is_active=True,
-                )
-                session.add(admin_user)
+                # Require admin password via environment to prevent seeding known default credentials
+                initial_admin_password = os.environ.get("INITIAL_ADMIN_PASSWORD") or os.environ.get("ADMIN_PASSWORD")
+                if initial_admin_password:
+                    admin_user = User(
+                        username=os.environ.get("INITIAL_ADMIN_USERNAME", "admin"),
+                        email=os.environ.get("INITIAL_ADMIN_EMAIL", "admin@magicmug.com"),
+                        password_hash=get_password_hash(initial_admin_password),
+                        full_name="Magic Mug",
+                        role="USER",
+                        is_active=True,
+                    )
+                    session.add(admin_user)
+                    logger.info("[init_db] Initial cafe admin account created from environment configuration.")
+                else:
+                    logger.warning("[init_db] No users exist in database. Set INITIAL_ADMIN_PASSWORD to seed initial admin user.")
             else:
                 existing_user.role = "USER"
             await session.commit()
         except Exception as e:
             await session.rollback()
-            print(f"[init_db] Admin user check: {e}")
-
+            logger.error(f"[init_db] Admin user check error: {e}")

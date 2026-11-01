@@ -35,7 +35,7 @@ class AuthProvider with ChangeNotifier {
       }
 
       if (_token != null) {
-        // Verify token with backend
+        // Verify saved token with backend /auth/me
         try {
           final res = await ApiClient().dio.get(ApiConfig.meEndpoint);
           if (res.statusCode == 200) {
@@ -44,13 +44,13 @@ class AuthProvider with ChangeNotifier {
               _user = User.fromJson(data);
               await prefs.setString('magic_mug_user', jsonEncode(_user!.toJson()));
             }
+          } else {
+            await logout();
           }
         } catch (_) {
-          // Token expired, re-login
-          await autoLogin();
+          // Token expired or server rejected; clear invalid token safely without auto-signing in
+          await logout();
         }
-      } else {
-        await autoLogin();
       }
       _initError = false;
     } catch (e) {
@@ -61,7 +61,8 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> autoLogin([String username = 'admin', String password = 'secretpassword']) async {
+  /// Secure login requiring explicit operator credentials (Issue 3 fix)
+  Future<bool> login(String username, String password) async {
     _isLoading = true;
     _initError = false;
     notifyListeners();
@@ -70,7 +71,7 @@ class AuthProvider with ChangeNotifier {
       final res = await ApiClient().dio.post(
         ApiConfig.loginEndpoint,
         data: {
-          'username': username,
+          'username': username.trim(),
           'password': password,
         },
       );

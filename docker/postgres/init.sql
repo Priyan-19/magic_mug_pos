@@ -184,19 +184,3 @@ ALTER TABLE expenses ADD COLUMN IF NOT EXISTS shift_id BIGINT NULL REFERENCES sh
 -- Expenses: add payment_mode CHECK
 ALTER TABLE expenses DROP CONSTRAINT IF EXISTS check_expense_payment_mode;
 ALTER TABLE expenses ADD CONSTRAINT check_expense_payment_mode CHECK (payment_mode IN ('CASH', 'UPI', 'CARD', 'BANK_TRANSFER'));
-
--- ============================================================================
--- 10. DEFAULT SEED DATA
--- ============================================================================
-
--- Default Cafe System Account for POS Station Auth (password: secretpassword)
-INSERT INTO users (username, email, password_hash, full_name, role, is_active)
-VALUES (
-    'admin',
-    'admin@magicmug.com',
-    '$2b$12$dVGHeTk49l/ynOKSpFbS7ud2RmT1SdIyAPpivQvoRX8NXkcC52Tcy',
-    'Magic Mug',
-    'OWNER',
-    TRUE
-)
-ON CONFLICT (username) DO NOTHING;

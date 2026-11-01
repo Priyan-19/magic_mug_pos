@@ -1,4 +1,5 @@
 import time
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
@@ -11,6 +12,8 @@ from app.core.config import settings
 from app.core.database import init_db
 from app.api.v1 import api_v1_router
 
+logger = logging.getLogger("uvicorn.error")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,23 +23,26 @@ async def lifespan(app: FastAPI):
     # Shutdown logic if any
 
 
+# Gate interactive documentation behind DEBUG (Issue 11 fix)
 app = FastAPI(
     title=settings.APP_NAME,
     description="Magic Mug - Production-Ready Cafe POS & Sales Management API",
     version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
+    openapi_url="/openapi.json" if settings.DEBUG else None,
     lifespan=lifespan
 )
 
 # Compression Middleware (reduces catalog & bills payloads by 40-70%)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# CORS Middleware
+# CORS Middleware (Issue 4 fix: prevent allow_credentials with wildcard origin)
+is_wildcard_cors = "*" in settings.cors_origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_credentials=True,
+    allow_credentials=not is_wildcard_cors,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -91,13 +97,23 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request: Request, exc: Exception):
+    # Log full traceback internally to server logs (Issue 7 fix)
+    logger.exception(f"Unhandled server exception: {exc}")
+    
+    # In production, never leak internal error message strings/tracebacks to clients
+    is_prod = settings.ENV.lower() in ("production", "prod")
+    client_message = (
+        str(exc) if (settings.DEBUG and not is_prod) 
+        else "An unexpected error occurred. Please contact the administrator."
+    )
+    
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={
             "success": False,
             "error": {
                 "code": "INTERNAL_SERVER_ERROR",
-                "message": str(exc) if settings.DEBUG else "An unexpected error occurred",
+                "message": client_message,
                 "details": None
             }
         },
@@ -107,12 +123,14 @@ async def general_exception_handler(request: Request, exc: Exception):
 # Health check
 @app.get("/", tags=["Health"])
 async def root():
-    return {
+    response = {
         "status": "online",
         "app": settings.APP_NAME,
-        "version": "1.0.0",
-        "docs": "/docs"
+        "version": "1.0.0"
     }
+    if settings.DEBUG:
+        response["docs"] = "/docs"
+    return response
 
 
 @app.get("/health", tags=["Health"])

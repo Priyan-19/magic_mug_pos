@@ -95,6 +95,10 @@ async def get_current_user(
 
 def require_role(allowed_roles: List[str]) -> Callable:
     async def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        # In single unified profile mode, all authenticated users have full access
+        if allowed_roles and current_user.role not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to access this resource",
+            )
         return current_user
     return role_checker

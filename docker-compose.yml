@@ -35,8 +35,8 @@ services:
       - ENV=production
       - TZ=Asia/Kolkata
       - DATABASE_URL=postgresql+asyncpg://pos_user:super_secure_pos_password@db:5432/magic_mug_pos
-      - SECRET_KEY=magic-mug-super-secret-key-change-in-production-2026
-      - ALLOWED_ORIGINS=*
+      - SECRET_KEY=${SECRET_KEY:-4f9a12c8e3b7d6051a82f4e9c1d0b3a75e2f81d4c9b0a3f7e6d1c8b2a5f9e0d3}
+      - ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://localhost:80
     depends_on:
       db:
         condition: service_healthy
