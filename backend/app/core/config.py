@@ -30,7 +30,10 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 720  # 12 hours
 
     # CORS
-    ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173"
+    ALLOWED_ORIGINS: str = (
+        "https://magic-mug-pos.vercel.app,https://magic-mug-pos.onrender.com,"
+        "http://localhost:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:4173"
+    )
 
     @model_validator(mode="after")
     def validate_insecure_defaults(self):
